@@ -7,39 +7,33 @@ import { encrypt } from "../utils/encrypt.js";
 
 export const userRegister = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, solanaPublicKey } = req.body;
 
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "All fields required" });
+    if (!name || !solanaPublicKey) {
+      return res.status(400).json({ message: "Name and wallet required" });
+    }
 
-    if (password.length < 8)
-      return res.status(400).json({ message: "Password too short" });
-
-    const exists = await User.findOne({ email });
-    if (exists)
-      return res.status(409).json({ message: "User already exists" });
-
-    // 🔐 Create Solana Wallet
-    const { publicKey, privateKey } = generateSolanaWallet();
-
-    const hashed = await bcrypt.hash(password, 12);
+    const exists = await User.findOne({ solanaPublicKey });
+    if (exists) {
+      return res.status(409).json({ message: "Wallet already registered" });
+    }
 
     const user = await User.create({
       name,
       email,
-      password: hashed,
-      solanaPublicKey: publicKey,
-      solanaPrivateKey: privateKey, // encrypted
+      solanaPublicKey,
     });
 
-    const token = signToken({ id: user._id, role: "user" });
+    const token = signToken({
+      id: user._id,
+      role: "user",
+    });
 
     res.status(201).json({
       token,
       user: {
         id: user._id,
-        email: user.email,
-        solanaPublicKey: publicKey,
+        solanaPublicKey: user.solanaPublicKey,
       },
     });
   } catch (err) {
@@ -99,35 +93,57 @@ export const getMe = async (req, res) => {
   }
 };
 
-// export const userRegister = async (req, res) => {
-//   try {
-//     const { name, email, password } = req.body;
+import crypto from "crypto";
 
-//     if (!name || !email || !password)
-//       return res.status(400).json({ message: "All fields required" });
+export const requestNonce = async (req, res) => {
+  const { solanaPublicKey } = req.body;
 
-//     if (password.length < 8)
-//       return res.status(400).json({ message: "Password too short" });
+  const user = await User.findOne({ solanaPublicKey });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
-//     const exists = await User.findOne({ email });
-//     if (exists)
-//       return res.status(409).json({ message: "User already exists" });
+  const nonce = crypto.randomBytes(16).toString("hex");
+  user.nonce = nonce;
+  await user.save();
 
-//     const hashed = await bcrypt.hash(password, 12);
+  res.json({ nonce });
+};
 
-//     const user = await User.create({
-//       name,
-//       email,
-//       password: hashed,
-//     });
+import nacl from "tweetnacl";
+import bs58 from "bs58";
 
-//     const token = signToken({ id: user._id, role: "user" });
+export const verifySignature = async (req, res) => {
+  const { solanaPublicKey, signature } = req.body;
 
-//     res.status(201).json({
-//       token,
-//       user: { id: user._id, email: user.email },
-//     });
-//   } catch (err) {
-//     res.status(500).json({ message: "Registration failed" });
-//   }
-// };
+  const user = await User.findOne({ solanaPublicKey });
+  if (!user || !user.nonce) {
+    return res.status(401).json({ message: "Invalid login attempt" });
+  }
+
+  const message = new TextEncoder().encode(user.nonce);
+  const sig = bs58.decode(signature);
+  const pubKey = bs58.decode(solanaPublicKey);
+
+  const valid = nacl.sign.detached.verify(message, sig, pubKey);
+
+  if (!valid) {
+    return res.status(401).json({ message: "Signature verification failed" });
+  }
+
+  user.nonce = null;
+  await user.save();
+
+  const token = signToken({
+    id: user._id,
+    role: "user",
+  });
+
+  res.json({
+    token,
+    user: {
+      id: user._id,
+      solanaPublicKey: user.solanaPublicKey,
+    },
+  });
+};

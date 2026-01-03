@@ -1,174 +1,219 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, Loader2, AlertCircle } from 'lucide-react'; // Ensure you install lucide-react
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, Mail, Loader2, AlertCircle, Wallet } from "lucide-react";
+import bs58 from "bs58";
 
 const UserAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+
   const navigate = useNavigate();
 
-  // Form State
+  const BASE_URL = `${import.meta.env.VITE_BACKEND_API}/user`;
+
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: ''
+    name: "",
+    email: "",
   });
 
-  // Handle Input Change
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Clear error when user types
-    if (error) setError('');
-  };
-
-  // Toggle between Login and Register
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    setError('');
-    setFormData({ name: '', email: '', password: '' });
-  };
-
-  // Handle Form Submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Backend URL (Assuming running locally on 5000 based on index.js)
-    const BASE_URL = import.meta.env.VITE_BACKEND_API + '/user';
-    const endpoint = isLogin ? '/login' : '/register';
-
+  // ---------------- Wallet Connect ----------------
+  const connectWallet = async () => {
     try {
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(isLogin 
-          ? { email: formData.email, password: formData.password }
-          : formData
-        ),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+      if (!window.solana || !window.solana.isPhantom) {
+        throw new Error("Phantom wallet not found");
       }
 
-      // Success: Store token and user data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', 'user');
-
-      // Redirect to dashboard or home
-      alert(`Successfully ${isLogin ? 'Logged In' : 'Registered'}!`);
-      navigate('/dashboard'); 
-
+      const res = await window.solana.connect();
+      const pubKey = res.publicKey.toBase58();
+      setWalletAddress(pubKey);
+      setError("");
+      return pubKey;
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Wallet connection failed");
+      return null;
+    }
+  };
+
+  // ---------------- REGISTER ----------------
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const publicKey = walletAddress || (await connectWallet());
+      if (!publicKey) return;
+
+      const res = await fetch(`${BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          solanaPublicKey: publicKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", "user");
+
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
+  // ---------------- LOGIN ----------------
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const publicKey = walletAddress || (await connectWallet());
+      if (!publicKey) return;
+
+      // 1️⃣ Request nonce
+      const nonceRes = await fetch(`${BASE_URL}/login/request-nonce`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solanaPublicKey: publicKey }),
+      });
+
+      const nonceData = await nonceRes.json();
+      if (!nonceRes.ok) throw new Error(nonceData.message);
+
+      // 2️⃣ Sign nonce
+      const encoded = new TextEncoder().encode(nonceData.nonce);
+      const signed = await window.solana.signMessage(encoded);
+
+      // 3️⃣ Verify signature
+      const verifyRes = await fetch(`${BASE_URL}/login/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solanaPublicKey: publicKey,
+          signature: bs58.encode(signed.signature),
+        }),
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.message);
+
+      localStorage.setItem("token", verifyData.token);
+      localStorage.setItem("role", "user");
+
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------- UI ----------------
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        
-        {/* Header Section */}
+        {/* Header */}
         <div className="bg-blue-600 p-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isLogin ? "Sign In with Wallet" : "Register with Wallet"}
           </h2>
           <p className="text-blue-100">
-            {isLogin 
-              ? 'Enter your details to access your account' 
-              : 'Join us and start your journey today'}
+            {isLogin
+              ? "Connect your wallet to continue"
+              : "Connect wallet and complete registration"}
           </p>
         </div>
 
-        {/* Form Section */}
+        {/* Body */}
         <div className="p-8">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center gap-2 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex gap-2 text-sm">
               <AlertCircle size={16} />
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Name Field (Register Only) */}
+          <form
+            onSubmit={isLogin ? handleLogin : handleRegister}
+            className="space-y-4"
+          >
             {!isLogin && (
-              <div className="relative">
-                <User className="absolute left-3 top-3.5 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Full Name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  required={!isLogin}
-                />
-              </div>
+              <>
+                <div className="relative">
+                  <User className="absolute left-3 top-3.5 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    required
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3.5 text-gray-400" size={20} />
+                  <input
+                    type="email"
+                    placeholder="Email (optional)"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg"
+                  />
+                </div>
+              </>
             )}
 
-            {/* Email Field */}
-            <div className="relative">
-              <Mail className="absolute left-3 top-3.5 text-gray-400" size={20} />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                required
-              />
-            </div>
+            <button
+              type="button"
+              onClick={connectWallet}
+              className="w-full flex items-center cursor-pointer justify-center gap-2 border py-3 rounded-lg"
+            >
+              <Wallet size={18} />
+              {walletAddress
+                ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                : "Connect Phantom Wallet"}
+            </button>
 
-            {/* Password Field */}
-            <div className="relative">
-              <Lock className="absolute left-3 top-3.5 text-gray-400" size={20} />
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                required
-                minLength={8} // Matches backend validation in userAuth.controller.js
-              />
-            </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mt-6"
+              className="w-full bg-blue-600 cursor-pointer hover:bg-blue-700 text-white py-3 rounded-lg flex justify-center gap-2"
             >
               {loading ? (
                 <>
                   <Loader2 className="animate-spin" size={20} />
                   Processing...
                 </>
+              ) : isLogin ? (
+                "Login with Wallet"
               ) : (
-                isLogin ? 'Sign In' : 'Sign Up'
+                "Register with Wallet"
               )}
             </button>
           </form>
 
-          {/* Toggle Link */}
-          <div className="mt-6 text-center text-sm text-gray-600">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <div className="mt-6 text-center text-sm">
+            {isLogin ? "New here? " : "Already registered? "}
             <button
-              onClick={toggleMode}
-              className="text-blue-600 font-semibold cursor-pointer hover:underline focus:outline-none"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-blue-600 cursor-pointer font-semibold hover:underline"
             >
-              {isLogin ? 'Register here' : 'Login here'}
+              {isLogin ? "Create account" : "Login"}
             </button>
           </div>
         </div>
