@@ -66,7 +66,7 @@ function Navbar() {
           to="/"
           className="hidden md:block text-lg font-semibold tracking-wide hover:opacity-90"
         >
-          SecureChat
+          shipyard
         </Link>
 
         {/* Desktop Navigation */}

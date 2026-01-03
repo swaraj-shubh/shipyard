@@ -5,6 +5,7 @@ import Navbar from './components/navbar';
 import './App.css'
 import Auth from './pages/Auth';
 import AdminAuth from './pages/AdminAuth';
+import NotFound from './pages/NotFound';
 
 function App() {
 
@@ -19,7 +20,7 @@ function App() {
           <Route path='/' element={<Home />} />
           <Route path='/auth' element={<Auth />} />
           <Route path='/admin/auth' element={<AdminAuth />} />
-          <Route path='*' element={<div className='text-center text-gray-600'>404</div>} />
+          <Route path='*' element={<NotFound />} />
         </Routes>
 
       </Routerz_Hehe>
