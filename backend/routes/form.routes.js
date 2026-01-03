@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 router.get("/", getAllForms);
-router.get("/:formId", protect, getFormById);
+router.get("/:formId", getFormById);
 
 // Admin
 router.post("/", protect, restrictTo("admin"), createForm);
