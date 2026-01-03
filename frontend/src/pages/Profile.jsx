@@ -4,7 +4,7 @@ import axios from "axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
 export default function Profile() {
   const [user, setUser] = useState(null);

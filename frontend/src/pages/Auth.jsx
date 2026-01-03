@@ -36,7 +36,7 @@ const UserAuth = () => {
     setError('');
 
     // Backend URL (Assuming running locally on 5000 based on index.js)
-    const BASE_URL = 'http://localhost:5000/api/user';
+    const BASE_URL = import.meta.env.VITE_BACKEND_API + '/user';
     const endpoint = isLogin ? '/login' : '/register';
 
     try {

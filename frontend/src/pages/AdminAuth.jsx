@@ -26,7 +26,7 @@ const AdminAuth = () => {
     setError('');
 
     // Backend URL (Based on index.js and adminAuth.routes.js)
-    const BASE_URL = 'http://localhost:5000/api/admin';
+    const BASE_URL = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000/api';
 
     try {
       // Endpoint: /login

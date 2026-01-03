@@ -39,7 +39,7 @@ const AdminRegister = () => {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:5000/api/admin/register`,
+        `${import.meta.env.VITE_BACKEND_API}/admin/register`,
         {
           method: "POST",
           headers: {

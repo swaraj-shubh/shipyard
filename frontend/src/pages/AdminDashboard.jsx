@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
 const QUESTION_TYPES = [
   "text",
