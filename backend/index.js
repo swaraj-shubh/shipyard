@@ -6,6 +6,7 @@ import userRoutes from "./routes/userAuth.routes.js";
 import adminRoutes from "./routes/adminAuth.routes.js";
 import formRoutes from "./routes/form.routes.js";
 import formResponseRoutes from "./routes/formResponse.routes.js";
+import taskRoutes from "./routes/task.routes.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/forms", formRoutes);
 app.use("/api/form-responses", formResponseRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Default route
 app.get("/", (req, res) => {
