@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Home from './pages/Home';
 import Navbar from './components/navbar';
 import './App.css'
+import AdminRegister from "./pages/AdminRegister";
 import Auth from './pages/Auth';
 import AdminAuth from './pages/AdminAuth';
 import NotFound from './pages/NotFound';
@@ -20,6 +21,7 @@ function App() {
           <Route path='/' element={<Home />} />
           <Route path='/auth' element={<Auth />} />
           <Route path='/admin/auth' element={<AdminAuth />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
           <Route path='*' element={<NotFound />} />
         </Routes>
 

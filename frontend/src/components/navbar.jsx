@@ -38,9 +38,8 @@ function Navbar() {
   }
 
   const getLinkClass = (path) => {
-    return `px-4 py-2 rounded-md transition-colors hover:bg-[#c0392b] text-gray-100 hover:shadow-lg shadow-black hover:text-white hover:font-medium transition-transform duration-300 hover:scale-105 ${
-      location.pathname === path ? "text-white font-bold" : ""
-    }`
+    return `px-4 py-2 rounded-md transition-colors hover:bg-[#c0392b] text-gray-100 hover:shadow-lg shadow-black hover:text-white hover:font-medium transition-transform duration-300 hover:scale-105 ${location.pathname === path ? "text-white font-bold" : ""
+      }`
   }
 
   const toggleMobileMenu = () => {
@@ -87,6 +86,20 @@ function Navbar() {
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
+
+            {!isAuthenticated && (
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link
+                    to="/admin/register"
+                    className={getLinkClass("/admin/register")}
+                  >
+                    Admin Register
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            )}
+
 
             {(role === "donor" || role === "admin") && (
               <NavigationMenuItem>
