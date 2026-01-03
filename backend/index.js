@@ -2,10 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import mongoose from "mongoose";
-import imageRoutes from "./routes/imageRoutes.js";
-import submissionRoutes from "./routes/submissionRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import evaluationRoutes from "./routes/evaluationRoutes.js";
+import userRoutes from "./routes/userAuth.routes.js";
+import adminRoutes from "./routes/adminAuth.routes.js";
 
 dotenv.config();
 
@@ -21,10 +19,9 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => console.log("❌ DB Connection Error:", err));
 
 // Routes
-app.use("/api/images", imageRoutes);
-app.use("/api/submissions", submissionRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/evaluations", evaluationRoutes); 
+
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Default route
 app.get("/", (req, res) => {
