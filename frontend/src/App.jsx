@@ -14,6 +14,7 @@ import Form from './pages/Form';
 import ResponseFormAdmin from './pages/ResponseFormAdmin';
 import ResponseFormUser from './pages/ResponseFormUser';
 import AdminForms from './pages/AdminForms';
+import AdminProfile from './pages/AdminProfile';
 
 function App() {
 
@@ -28,11 +29,12 @@ function App() {
           <Route path='/' element={<Home />} />
           <Route path='/auth' element={<Auth />} />
           <Route path='/profile' element={<Profile />} />
-          <Route path='/admin/dashboard' element={<AdminDashboard />} />
-          <Route path='/admin/auth' element={<AdminAuth />} />
           <Route path="/dashboard" element={<UserDashboard />} />
           <Route path="/form/:formId" element={<Form />} />
+          <Route path='/admin/dashboard' element={<AdminDashboard />} />
+          <Route path='/admin/auth' element={<AdminAuth />} />
           <Route path="/admin/register" element={<AdminRegister />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
           <Route path="/admin/form" element={<AdminForms />} />
           <Route path="/admin/form/:formId/responses" element={<ResponseFormAdmin />} />
           <Route path="/my-submissions" element={<ResponseFormUser />} />

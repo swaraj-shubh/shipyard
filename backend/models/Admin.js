@@ -1,25 +1,34 @@
-// models/Admin.js
 import mongoose from "mongoose";
 
-const adminSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true  
+const adminSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+
+    email: {
+      type: String,
+      lowercase: true,
+    },
+
+    solanaPublicKey: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    superAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    nonce: {
+      type: String, // for wallet login
+    },
   },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    lowercase: true
-  },
-  password: { 
-    type: String, 
-    required: true
-  },
-  superAdmin: { 
-    type: Boolean, 
-    default: false
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("Admin", adminSchema);

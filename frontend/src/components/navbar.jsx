@@ -138,6 +138,8 @@ function Navbar() {
            
 
             <div className="ml-auto flex items-center gap-4">
+              
+              {role === "user" && (
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
                   <Link to="/profile" className={getLinkClass("/profile")}>
@@ -145,8 +147,18 @@ function Navbar() {
                   </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
+              )}
 
-              
+              {role === "admin" && (
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link to="/admin/profile" className={getLinkClass("/admin/profile")}>
+                      Profile
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              )}
+
               {role === "user" && (
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild>

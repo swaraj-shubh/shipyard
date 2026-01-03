@@ -1,68 +1,65 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Wallet, Loader2, AlertCircle } from "lucide-react";
 
 const AdminRegister = () => {
   const navigate = useNavigate();
+  const BASE_URL =
+    import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
   });
 
+  const [walletAddress, setWalletAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // 🔐 Connect Wallet
+  const connectWallet = async () => {
+    try {
+      if (!window.solana || !window.solana.isPhantom) {
+        throw new Error("Phantom wallet not found");
+      }
+      const res = await window.solana.connect();
+      setWalletAddress(res.publicKey.toBase58());
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
-    const { name, email, password } = formData;
-
-    if (!name || !email || !password) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (!formData.name || !walletAddress) {
+      setError("Name and wallet connection are required");
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}/admin/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const res = await fetch(`${BASE_URL}/admin/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          solanaPublicKey: walletAddress,
+        }),
+      });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
 
-      if (!res.ok) {
-        throw new Error(data.message || "Registration failed");
-      }
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("role", "admin");
 
-      setSuccess("Admin registered successfully 🎉");
-      setFormData({ name: "", email: "", password: "" });
-
-      setTimeout(() => {
-        navigate("/admin/auth");
-      }, 1500);
+      navigate("/admin/dashboard");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Admin registration failed");
     } finally {
       setLoading(false);
     }
@@ -72,82 +69,63 @@ const AdminRegister = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold text-center mb-6">
-          Admin Registration
+          Admin Wallet Registration
         </h2>
 
         {error && (
-          <div className="mb-4 text-red-600 text-sm text-center">
+          <div className="mb-4 text-red-600 text-sm flex gap-2">
+            <AlertCircle size={16} />
             {error}
           </div>
         )}
 
-        {success && (
-          <div className="mb-4 text-green-600 text-sm text-center">
-            {success}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Admin Name"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Admin Name"
+            className="w-full border px-3 py-2 rounded"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData({ ...formData, name: e.target.value })
+            }
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="admin@example.com"
-            />
-          </div>
+          <input
+            type="email"
+            placeholder="Email (optional)"
+            className="w-full border px-3 py-2 rounded"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Minimum 8 characters"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={connectWallet}
+            className="w-full flex items-center justify-center gap-2 border py-2 rounded"
+          >
+            <Wallet size={18} />
+            {walletAddress
+              ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+              : "Connect Phantom Wallet"}
+          </button>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-2 rounded flex justify-center gap-2"
           >
-            {loading ? "Registering..." : "Register"}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Registering...
+              </>
+            ) : (
+              "Register Admin"
+            )}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Already an admin?{" "}
-          <span
-            onClick={() => navigate("/admin/login")}
-            className="text-blue-600 cursor-pointer hover:underline"
-          >
-            Login
-          </span>
-        </p>
       </div>
     </div>
   );
