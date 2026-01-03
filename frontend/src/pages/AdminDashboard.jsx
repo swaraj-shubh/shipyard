@@ -35,7 +35,7 @@ export default function AdminDashboard() {
   const fetchForms = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-
+      console.log("Using token:", token);
       const res = await axios.get(`${API_BASE}/forms/admin/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });

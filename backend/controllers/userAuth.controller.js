@@ -61,6 +61,24 @@ export const userLogin = async (req, res) => {
 
   res.json({ token, user: { id: user._id, email: user.email } });
 };
+// make getMe for both user and admin
+export const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  const admin = await Admin.findOne({ email });
+  if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+  const match = await bcrypt.compare(password, admin.password);
+  if (!match) return res.status(400).json({ message: "Invalid credentials" });
+
+  const token = signToken({
+    id: admin._id,
+    role: "admin",
+    superAdmin: admin.superAdmin,
+  });
+
+  res.json({ token, admin: { id: admin._id, email: admin.email } });
+};
 
 export const getMe = async (req, res) => {
   try {

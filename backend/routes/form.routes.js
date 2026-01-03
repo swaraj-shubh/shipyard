@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", protect, getAllForms);
+router.get("/", getAllForms);
 router.get("/:formId", protect, getFormById);
 
 // Admin

@@ -25,13 +25,16 @@ function Navbar() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     const userRole = localStorage.getItem("role")
-    setIsAuthenticated(!!token)
+    const adminToken = localStorage.getItem("adminToken")
+
+    setIsAuthenticated(!!token || !!adminToken)
     setRole(userRole)
   }, [])
 
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("role")
+    localStorage.removeItem("adminToken")
     setIsAuthenticated(false)
     setRole(null)
     navigate("/")
@@ -79,13 +82,31 @@ function Navbar() {
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            <NavigationMenuItem>
+            {role=="user"&&(<NavigationMenuItem>
               <NavigationMenuLink asChild>
-                <Link to="/admin/auth" className={getLinkClass("/admin/auth")}>
-                  Admin Login
+                <Link to="/dashboard" className={getLinkClass("/dashboard")}>
+                  User Dashboard
                 </Link>
               </NavigationMenuLink>
-            </NavigationMenuItem>
+            </NavigationMenuItem>)}
+
+            {role=="admin" && (<NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link to="/admin/dashboard" className={getLinkClass("/admin/dashboard")}>
+                  Admin Dashboard
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>)}
+            
+            {!isAuthenticated && (
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link to="/admin/auth" className={getLinkClass("/admin/auth")}>
+                    Admin Login
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            )}
 
             {!isAuthenticated && (
               <NavigationMenuItem>
@@ -101,6 +122,7 @@ function Navbar() {
             )}
 
 
+            {/*
             {(role === "donor" || role === "admin") && (
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
@@ -112,7 +134,8 @@ function Navbar() {
                   </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
-            )}
+            )} 
+            */}
 
             <div className="ml-auto flex items-center gap-4">
               <NavigationMenuItem>
@@ -123,6 +146,7 @@ function Navbar() {
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
+              {/*
               {role === "admin" && (
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild>
@@ -132,6 +156,7 @@ function Navbar() {
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               )}
+              */}
 
               <NavigationMenuItem>
                 {isAuthenticated ? (

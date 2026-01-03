@@ -26,7 +26,8 @@ const userSchema = new mongoose.Schema({
   // ⚠️ OPTIONAL (encrypted if stored)
   solanaPrivateKey: {
     type: String,
-    select: false, // never return in queries
+    required: true,
+    // select: false, // never return in queries
   },
 }, { timestamps: true });
 

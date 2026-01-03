@@ -14,6 +14,8 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("token");
+      const adminToken = localStorage.getItem("adminToken");
+      
 
       if (!token) {
         setError("Not authenticated");

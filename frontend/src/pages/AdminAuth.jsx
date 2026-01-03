@@ -29,8 +29,8 @@ const AdminAuth = () => {
     const BASE_URL = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000/api';
 
     try {
-      // Endpoint: /login
-      const response = await fetch(`${BASE_URL}/login`, {
+      // Endpoint: /admin/login
+      const response = await fetch(`${BASE_URL}/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,6 +48,7 @@ const AdminAuth = () => {
       // Storing as 'adminToken' to avoid conflict with user 'token'
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminUser', JSON.stringify(data.admin));
+      localStorage.setItem('role', 'admin');
 
       // Redirect to Admin Dashboard
       alert('Welcome, Administrator');

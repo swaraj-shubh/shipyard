@@ -9,6 +9,8 @@ import AdminAuth from './pages/AdminAuth';
 import NotFound from './pages/NotFound';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import UserDashboard from './pages/UserDashboard';
+import Form from './pages/Form';
 
 function App() {
 
@@ -25,6 +27,8 @@ function App() {
           <Route path='/profile' element={<Profile />} />
           <Route path='/admin/dashboard' element={<AdminDashboard />} />
           <Route path='/admin/auth' element={<AdminAuth />} />
+          <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/form/:formId" element={<Form />} />
           <Route path="/admin/register" element={<AdminRegister />} />
           <Route path='*' element={<NotFound />} />
         </Routes>

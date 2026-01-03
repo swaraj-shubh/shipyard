@@ -59,7 +59,7 @@ const UserAuth = () => {
 
       // Success: Store token and user data
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('role', 'user');
 
       // Redirect to dashboard or home
       alert(`Successfully ${isLogin ? 'Logged In' : 'Registered'}!`);
