@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_BACKEND_API;
 
 export default function ResponseFormAdmin() {
   const { formId } = useParams();
