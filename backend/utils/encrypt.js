@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const WALLET_ENCRYPTION_KEY='f8d888698ceda22cec37338b9032c57d23664fb5d93e29022695e3f5a57e8cc7';
+const WALLET_ENCRYPTION_KEY='4zduMZzCwkP4pLZ77q2pixpWAGvht6JwoEfjPLUmKqo8VUtpKjz517Wci65w5PdXXJBE3TVzdSaDMBDG1DTTLKkv';
 
 // if (!process.env.WALLET_ENCRYPTION_KEY) {
 //   throw new Error("❌ WALLET_ENCRYPTION_KEY is missing in .env");

@@ -7,6 +7,7 @@ import adminRoutes from "./routes/adminAuth.routes.js";
 import formRoutes from "./routes/form.routes.js";
 import formResponseRoutes from "./routes/formResponse.routes.js";
 import taskRoutes from "./routes/task.routes.js";
+import blockchainRoutes from "./routes/blockchain.routes.js";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/forms", formRoutes);
 app.use("/api/form-responses", formResponseRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/blockchain", blockchainRoutes);
 
 // Default route
 app.get("/", (req, res) => {
