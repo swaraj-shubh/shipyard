@@ -1,34 +1,38 @@
-// models/User.js
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String, 
-    required: true,
-    trim: true
-  },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    lowercase: true 
-  },
-  password: { 
-    type: String, 
-    required: true 
-  },
-  // 🔐 Solana Wallet
-  solanaPublicKey: {
-    type: String,
-    required: true,
-  },
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-  // ⚠️ OPTIONAL (encrypted if stored)
-  solanaPrivateKey: {
-    type: String,
-    required: true,
-    // select: false, // never return in queries
+    email: {
+      type: String,
+      lowercase: true,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    solanaPublicKey: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    role: {
+      type: String,
+      default: "user",
+    },
+
+    nonce: {
+      type: String, // used for login signature
+    },
   },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("User", userSchema);
