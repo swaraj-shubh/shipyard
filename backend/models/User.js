@@ -12,10 +12,21 @@ const userSchema = new mongoose.Schema({
     required: true, 
     unique: true, 
     lowercase: true 
-},
+  },
   password: { 
     type: String, 
     required: true 
+  },
+  // 🔐 Solana Wallet
+  solanaPublicKey: {
+    type: String,
+    required: true,
+  },
+
+  // ⚠️ OPTIONAL (encrypted if stored)
+  solanaPrivateKey: {
+    type: String,
+    select: false, // never return in queries
   },
 }, { timestamps: true });
 
