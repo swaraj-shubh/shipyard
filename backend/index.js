@@ -4,6 +4,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import userRoutes from "./routes/userAuth.routes.js";
 import adminRoutes from "./routes/adminAuth.routes.js";
+import formRoutes from "./routes/form.routes.js";
+import formResponseRoutes from "./routes/formResponse.routes.js";
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/forms", formRoutes);
+app.use("/api/form-responses", formResponseRoutes);
 
 // Default route
 app.get("/", (req, res) => {

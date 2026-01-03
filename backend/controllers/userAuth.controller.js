@@ -62,6 +62,25 @@ export const userLogin = async (req, res) => {
   res.json({ token, user: { id: user._id, email: user.email } });
 };
 
+export const getMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findById(userId).select(
+      "-password -solanaPrivateKey"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error("GetMe error:", err);
+    res.status(500).json({ message: "Failed to fetch user data" });
+  }
+};
+
 // export const userRegister = async (req, res) => {
 //   try {
 //     const { name, email, password } = req.body;
