@@ -50,7 +50,7 @@ function Navbar() {
   }
 
   return (
-    <header className="bg-green-900 rounded-b-sm text-white shadow-2xl w-full sticky top-0 z-50">
+    <header className="bg-slate-900 text-white shadow-2xl sticky top-0 z-50">
       <div className="container flex items-center justify-between p-4 mx-auto">
         {/* Mobile menu button */}
         <div className="md:hidden flex items-center">
@@ -122,20 +122,20 @@ function Navbar() {
             )}
 
 
-            {/*
-            {(role === "donor" || role === "admin") && (
+            
+            {(role === "admin") && (
               <NavigationMenuItem>
                 <NavigationMenuLink asChild>
                   <Link
-                    to="/restaurantDashboard"
-                    className={getLinkClass("/restaurantDashboard")}
+                    to="/admin/form"
+                    className={getLinkClass("/admin/form")}
                   >
-                    Donate
+                    Admin Forms
                   </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             )} 
-            */}
+           
 
             <div className="ml-auto flex items-center gap-4">
               <NavigationMenuItem>
@@ -146,24 +146,24 @@ function Navbar() {
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
-              {/*
-              {role === "admin" && (
+              
+              {role === "user" && (
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild>
-                    <Link to="/admin" className={getLinkClass("/admin")}>
-                      Admin
+                    <Link to="/my-submissions" className={getLinkClass("/my-submissions")}>
+                      My Submissions
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               )}
-              */}
+             
 
               <NavigationMenuItem>
                 {isAuthenticated ? (
                   <Button
                     variant="secondary"
                     onClick={handleLogout}
-                    className="bg-white text-black font-semibold hover:bg-gray-200 transition-all duration-300"
+                    className="bg-white cursor-pointer text-black font-semibold hover:bg-gray-200 transition-all duration-300"
                   >
                     Logout
                   </Button>
