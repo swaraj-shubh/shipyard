@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Navbar from './components/navbar';
 import './App.css'
 import Auth from './pages/Auth';
+import AdminAuth from './pages/AdminAuth';
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
         <Routes className='mt-16'>
           <Route path='/' element={<Home />} />
           <Route path='/auth' element={<Auth />} />
+          <Route path='/admin/auth' element={<AdminAuth />} />
           <Route path='*' element={<div className='text-center text-gray-600'>404</div>} />
         </Routes>
 

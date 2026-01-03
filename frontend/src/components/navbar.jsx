@@ -82,8 +82,8 @@ function Navbar() {
 
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
-                <Link to="/map" className={getLinkClass("/map")}>
-                  Map
+                <Link to="/admin/auth" className={getLinkClass("/admin/auth")}>
+                  Admin Login
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>

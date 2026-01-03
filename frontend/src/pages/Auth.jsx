@@ -1,123 +1,180 @@
-import React, { useState } from "react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Lock, Loader2, AlertCircle } from 'lucide-react'; // Ensure you install lucide-react
 
-const Auth = () => {
-  const [activeTab, setActiveTab] = useState("login")
+const UserAuth = () => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleLogin = (e) => {
-    e.preventDefault()
-    // TODO: handle login logic
-    console.log("Logging in...")
-  }
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
 
-  const handleRegister = (e) => {
-    e.preventDefault()
-    // TODO: handle registration logic
-    console.log("Registering user...")
-  }
+  // Handle Input Change
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear error when user types
+    if (error) setError('');
+  };
+
+  // Toggle between Login and Register
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    setFormData({ name: '', email: '', password: '' });
+  };
+
+  // Handle Form Submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Backend URL (Assuming running locally on 5000 based on index.js)
+    const BASE_URL = 'http://localhost:5000/api/user';
+    const endpoint = isLogin ? '/login' : '/register';
+
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(isLogin 
+          ? { email: formData.email, password: formData.password }
+          : formData
+        ),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Authentication failed');
+      }
+
+      // Success: Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Redirect to dashboard or home
+      alert(`Successfully ${isLogin ? 'Logged In' : 'Registered'}!`);
+      navigate('/dashboard'); 
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
-      <Card className="w-full max-w-md shadow-2xl border border-slate-700 bg-slate-900/80 backdrop-blur">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-semibold text-white tracking-wide">
-            Welcome to SecureChat
-          </CardTitle>
-          <p className="text-slate-400 text-sm mt-1">Quantum-Protected Communication</p>
-        </CardHeader>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        
+        {/* Header Section */}
+        <div className="bg-blue-600 p-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-2">
+            {isLogin ? 'Welcome Back' : 'Create Account'}
+          </h2>
+          <p className="text-blue-100">
+            {isLogin 
+              ? 'Enter your details to access your account' 
+              : 'Join us and start your journey today'}
+          </p>
+        </div>
 
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6 bg-slate-800">
-              <TabsTrigger value="login" className="text-white data-[state=active]:bg-slate-700">
-                Login
-              </TabsTrigger>
-              <TabsTrigger value="register" className="text-white data-[state=active]:bg-slate-700">
-                Register
-              </TabsTrigger>
-            </TabsList>
+        {/* Form Section */}
+        <div className="p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center gap-2 text-sm">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
 
-            {/* Login Tab */}
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <Label htmlFor="email" className="text-white">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="bg-slate-800 text-white border-slate-700 mt-1"
-                    required
-                  />
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* Name Field (Register Only) */}
+            {!isLogin && (
+              <div className="relative">
+                <User className="absolute left-3 top-3.5 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Full Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  required={!isLogin}
+                />
+              </div>
+            )}
 
-                <div>
-                  <Label htmlFor="password" className="text-white">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="bg-slate-800 text-white border-slate-700 mt-1"
-                    required
-                  />
-                </div>
+            {/* Email Field */}
+            <div className="relative">
+              <Mail className="absolute left-3 top-3.5 text-gray-400" size={20} />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                required
+              />
+            </div>
 
-                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">
-                  Login
-                </Button>
-              </form>
-            </TabsContent>
+            {/* Password Field */}
+            <div className="relative">
+              <Lock className="absolute left-3 top-3.5 text-gray-400" size={20} />
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                required
+                minLength={8} // Matches backend validation in userAuth.controller.js
+              />
+            </div>
 
-            {/* Register Tab */}
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-white">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
-                    className="bg-slate-800 text-white border-slate-700 mt-1"
-                    required
-                  />
-                </div>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mt-6"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Processing...
+                </>
+              ) : (
+                isLogin ? 'Sign In' : 'Sign Up'
+              )}
+            </button>
+          </form>
 
-                <div>
-                  <Label htmlFor="email" className="text-white">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="bg-slate-800 text-white border-slate-700 mt-1"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="password" className="text-white">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="bg-slate-800 text-white border-slate-700 mt-1"
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-full bg-green-600 hover:bg-green-500 text-white">
-                  Register
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          {/* Toggle Link */}
+          <div className="mt-6 text-center text-sm text-gray-600">
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            <button
+              onClick={toggleMode}
+              className="text-blue-600 font-semibold cursor-pointer hover:underline focus:outline-none"
+            >
+              {isLogin ? 'Register here' : 'Login here'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Auth
+export default UserAuth;
