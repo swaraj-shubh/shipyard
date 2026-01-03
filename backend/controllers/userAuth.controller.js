@@ -29,7 +29,7 @@ export const userRegister = async (req, res) => {
       email,
       password: hashed,
       solanaPublicKey: publicKey,
-      solanaPrivateKey: encrypt(privateKey), // encrypted
+      solanaPrivateKey: privateKey, // encrypted
     });
 
     const token = signToken({ id: user._id, role: "user" });
