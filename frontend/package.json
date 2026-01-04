@@ -23,6 +23,7 @@
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@tailwindcss/vite": "^4.1.14",
     "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.6",
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.13.2",
     "bs58": "^6.0.0",

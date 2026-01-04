@@ -9,10 +9,10 @@ version = "0.1.0"
 description = "Proof of Human escrow program"
 
 [programs.localnet]
-proof_of_human = "GD3rPe9P8NfsJZ1m4dcsqTBJpodc956hB4AJydjvakdA"
+proof_of_human = "3y31A2BrBSMQ6unaBmXxuT9ZiArsxCkbW1RXf4vmnxX4"
 
 [programs.devnet]
-proof_of_human = "GD3rPe9P8NfsJZ1m4dcsqTBJpodc956hB4AJydjvakdA"
+proof_of_human = "3y31A2BrBSMQ6unaBmXxuT9ZiArsxCkbW1RXf4vmnxX4"
 
 [provider]
 cluster = "devnet"

@@ -28,8 +28,6 @@ const MIN_NET_SCORE = 70;
 /* -------------------------------------------------------------------------- */
 
 export default function DynamicForm() {
-  /* ----------------------------- HELPERS ----------------------------- */
-
   const getFormId = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get("formId") || window.location.pathname.split("/").pop();
@@ -43,10 +41,12 @@ export default function DynamicForm() {
   const [answers, setAnswers] = useState({});
   const [formLoading, setFormLoading] = useState(true);
   const [formError, setFormError] = useState(null);
-  const [showReport, setShowReport] = useState(false);
-  const [securityReady, setSecurityReady] = useState(false);
+
+  const [systemReady, setSystemReady] = useState(false); // ✅ NEW
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+
+  const [showReport, setShowReport] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
 
   const [liveStats, setLiveStats] = useState({
     checks: 0,
@@ -90,11 +90,9 @@ export default function DynamicForm() {
   const calculateScore = useCallback(() => {
     const faces = metricsRef.current.faceDetections;
     if (!faces.length) return 0;
-
-    const avg =
-      faces.reduce((s, f) => s + f.confidence, 0) / faces.length;
-
-    return Math.round(avg * 100);
+    return Math.round(
+      (faces.reduce((s, f) => s + f.confidence, 0) / faces.length) * 100
+    );
   }, []);
 
   /* -------------------------------------------------------------------------- */
@@ -118,24 +116,27 @@ export default function DynamicForm() {
         checks: p.checks + 1,
         overallScore: calculateScore(),
       }));
+
+      // ✅ system becomes usable after first successful check
+      setSystemReady(true);
     } catch {}
 
     timeoutRef.current = setTimeout(runCheck, THRESHOLDS.CHECK_INTERVAL);
   }, [calculateScore]);
 
   /* -------------------------------------------------------------------------- */
-  /* INIT CAMERA */
+  /* INIT CAMERA + MODEL */
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
     if (!form) return;
-
     let stream;
 
     (async () => {
       try {
         await tf.setBackend("webgl");
         await tf.ready();
+
         const bf = await import("@tensorflow-models/blazeface");
         modelRef.current = await bf.load();
 
@@ -145,11 +146,10 @@ export default function DynamicForm() {
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
           surveillanceRef.current.running = true;
-          setSecurityReady(true);
           runCheck();
         };
       } catch (e) {
-        console.error(e);
+        console.error("Initialization error:", e);
       }
     })();
 
@@ -161,35 +161,33 @@ export default function DynamicForm() {
   }, [form, runCheck]);
 
   /* -------------------------------------------------------------------------- */
-  /* SUBMIT */
+  /* SUBMIT FLOW */
   /* -------------------------------------------------------------------------- */
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (liveStats.checks < THRESHOLDS.MIN_CHECKS_REQUIRED) {
-      alert("Verification still running");
+    if (!systemReady || liveStats.checks < THRESHOLDS.MIN_CHECKS_REQUIRED) {
+      setSubmitStatus("verifying");
+      setShowReport(true);
       return;
     }
 
     if (calculateScore() < MIN_NET_SCORE) {
-      alert("Integrity score too low");
+      setSubmitStatus("bot");
+      setShowReport(true);
       return;
     }
 
+    setSubmitStatus("confirm");
     setShowReport(true);
   };
 
   const finalizeSubmission = async () => {
     setSubmitting(true);
 
-    const netScore = calculateScore();
-
     const formattedAnswers = Object.entries(answers).map(
-      ([questionId, value]) => ({
-        questionId,
-        value,
-      })
+      ([questionId, value]) => ({ questionId, value })
     );
 
     try {
@@ -204,8 +202,8 @@ export default function DynamicForm() {
           body: JSON.stringify({
             answers: formattedAnswers,
             verification: {
-              netScore,
-              passed: netScore >= MIN_NET_SCORE,
+              netScore: calculateScore(),
+              passed: true,
             },
           }),
         }
@@ -213,11 +211,7 @@ export default function DynamicForm() {
 
       if (!res.ok) throw new Error("Submission failed");
 
-      // ✅ CLEAN EXIT
-      setShowReport(false);
-      setSubmitted(true);
-      surveillanceRef.current.running = false;
-      clearTimeout(timeoutRef.current);
+      window.location.href = "/my-submission";
     } catch (err) {
       alert(err.message);
     } finally {
@@ -229,22 +223,19 @@ export default function DynamicForm() {
   /* RENDER STATES */
   /* -------------------------------------------------------------------------- */
 
-  if (formLoading) return <div className="p-10 text-white">Loading...</div>;
-  if (formError) return <div className="p-10 text-red-400">{formError}</div>;
-
-  if (submitted) {
+  if (formLoading)
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <Card className="bg-slate-800 p-8 text-center">
-          <Shield className="w-12 h-12 mx-auto mb-4 text-green-400" />
-          <h2 className="text-2xl font-bold text-white">Submission Complete</h2>
-          <p className="text-slate-400 mt-2">
-            This task is no longer available to you.
-          </p>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <Loader2 className="animate-spin mr-2" />
+        Loading form…
       </div>
     );
-  }
+
+  if (formError)
+    return <div className="p-10 text-red-400">{formError}</div>;
+
+  const progress =
+    Math.min(liveStats.checks / THRESHOLDS.MIN_CHECKS_REQUIRED, 1) * 100;
 
   /* -------------------------------------------------------------------------- */
   /* UI */
@@ -261,27 +252,24 @@ export default function DynamicForm() {
         className="fixed bottom-6 left-6 w-48 rounded border border-green-500"
       />
 
-      {/* DASHBOARD */}
+      {/* VERIFICATION PROGRESS (NO NUMBERS) */}
       <div className="max-w-xl mx-auto mb-6">
         <Card className="bg-slate-800">
-          <CardContent className="pt-6 grid grid-cols-3 text-center">
-            <div>
-              <Shield className="mx-auto mb-1" />
-              {liveStats.checks}
+          <CardContent className="pt-6 space-y-3">
+            <div className="text-xs text-slate-400">
+              Initializing verification system
             </div>
-            <div>
-              <Camera className="mx-auto mb-1" />
-              Active
-            </div>
-            <div>
-              <Activity className="mx-auto mb-1" />
-              {liveStats.overallScore}%
+            <div className="w-full bg-slate-700 h-2 rounded overflow-hidden">
+              <div
+                className="bg-green-500 h-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* FORM */}
+      {/* FORM (DISABLED UNTIL READY) */}
       <Card className="max-w-xl mx-auto bg-slate-800">
         <CardHeader>
           <CardTitle>{form.title}</CardTitle>
@@ -290,7 +278,6 @@ export default function DynamicForm() {
         <CardContent className="space-y-6">
           {form.questions.map((q) => {
             const qId = q._id;
-
             return (
               <div key={qId}>
                 <Label>
@@ -300,21 +287,21 @@ export default function DynamicForm() {
 
                 {q.type === "text" && (
                   <Input
+                    disabled={!systemReady}
                     value={answers[qId] || ""}
                     onChange={(e) =>
                       setAnswers((p) => ({ ...p, [qId]: e.target.value }))
                     }
-                    required={q.required}
                   />
                 )}
 
                 {q.type === "textarea" && (
                   <Textarea
+                    disabled={!systemReady}
                     value={answers[qId] || ""}
                     onChange={(e) =>
                       setAnswers((p) => ({ ...p, [qId]: e.target.value }))
                     }
-                    required={q.required}
                   />
                 )}
               </div>
@@ -323,7 +310,7 @@ export default function DynamicForm() {
 
           <Button
             onClick={handleSubmit}
-            disabled={!securityReady}
+            disabled={!systemReady}
             className="w-full bg-green-600"
           >
             Submit Form
@@ -331,20 +318,46 @@ export default function DynamicForm() {
         </CardContent>
       </Card>
 
-      {/* REPORT */}
+      {/* SUBMIT POPUP */}
       {showReport && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center">
-          <Card className="bg-slate-800 p-10 text-center">
-            <div className="text-6xl font-bold mb-4">
-              {liveStats.overallScore}%
-            </div>
-            <Button
-              onClick={finalizeSubmission}
-              disabled={submitting}
-              className="bg-green-600"
-            >
-              {submitting ? <Loader2 className="animate-spin" /> : "Confirm"}
-            </Button>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+          <Card className="bg-slate-800 p-10 text-center max-w-md w-full">
+            {submitStatus === "verifying" && (
+              <>
+                <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin text-yellow-400" />
+                <h2 className="text-xl font-bold">
+                  Verification still running
+                </h2>
+              </>
+            )}
+
+            {submitStatus === "bot" && (
+              <>
+                <Shield className="w-12 h-12 mx-auto mb-4 text-red-500" />
+                <h2 className="text-xl font-bold text-red-400">
+                  Bot-like behaviour detected
+                </h2>
+              </>
+            )}
+
+            {submitStatus === "confirm" && (
+              <>
+                <h2 className="text-xl font-bold mb-6">
+                  Confirm submission
+                </h2>
+                <Button
+                  onClick={finalizeSubmission}
+                  disabled={submitting}
+                  className="w-full bg-green-600"
+                >
+                  {submitting ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    "Confirm & Submit"
+                  )}
+                </Button>
+              </>
+            )}
           </Card>
         </div>
       )}
