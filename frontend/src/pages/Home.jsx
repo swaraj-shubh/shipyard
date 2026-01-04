@@ -18,7 +18,13 @@ import {
   Clock,
   Award,
   TrendingUp,
-  Fingerprint
+  Fingerprint,
+  Mail,
+  Wallet,
+  Calendar,
+  FileText,
+  Network,
+  Eye
 } from "lucide-react";
 
 const fadeInUp = {
@@ -51,8 +57,9 @@ const pulseAnimation = {
     }
   }
 };
-
+import { useNavigate } from "react-router-dom";
 export default function Home() {
+  const navigate = useNavigate();
   const { scrollY } = useScroll();
   const [isVisible, setIsVisible] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -65,10 +72,10 @@ export default function Home() {
   }, []);
 
   const features = [
-    { icon: <ShieldCheck />, title: "Human-Proof", desc: "Verifiable on-chain identity" },
-    { icon: <Zap />, title: "Lightning Fast", desc: "Solana-powered transactions" },
-    { icon: <Users />, title: "Spam-Free", desc: "Zero AI-generated applications" },
-    { icon: <Lock />, title: "Secure", desc: "Non-transferable credentials" }
+    { icon: <ShieldCheck />, title: "Human-Proof", desc: "Verifiable on-chain identity", color: "from-teal-500 to-emerald-500" },
+    { icon: <Zap />, title: "Lightning Fast", desc: "Solana-powered transactions", color: "from-cyan-500 to-blue-500" },
+    { icon: <Users />, title: "Spam-Free", desc: "Zero AI-generated applications", color: "from-indigo-500 to-purple-500" },
+    { icon: <Lock />, title: "Secure", desc: "Non-transferable credentials", color: "from-gray-700 to-gray-900" }
   ];
 
   const howItWorks = [
@@ -76,34 +83,34 @@ export default function Home() {
       title: "Connect & Verify",
       steps: ["Connect wallet", "Human verification", "Get your Proof NFT"],
       icon: <Fingerprint className="h-8 w-8" />,
-      color: "from-blue-500 to-cyan-500"
+      color: "from-teal-500 to-emerald-500"
     },
     {
       title: "Apply Freely",
       steps: ["Browse opportunities", "One-click apply", "No CAPTCHAs needed"],
       icon: <Target className="h-8 w-8" />,
-      color: "from-purple-500 to-pink-500"
+      color: "from-blue-500 to-indigo-500"
     },
     {
       title: "Post Opportunities",
       steps: ["Create listings", "Set requirements", "Receive clean apps"],
       icon: <Award className="h-8 w-8" />,
-      color: "from-green-500 to-emerald-500"
+      color: "from-amber-500 to-orange-500"
     },
     {
       title: "Scale Trust",
       steps: ["Verified ecosystem", "Reputation system", "Community growth"],
       icon: <TrendingUp className="h-8 w-8" />,
-      color: "from-orange-500 to-red-500"
+      color: "from-gray-700 to-gray-900"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-gray-50 text-gray-900 overflow-hidden">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl"
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl"
           animate={{ 
             x: [0, 30, 0],
             y: [0, -20, 0]
@@ -111,7 +118,7 @@ export default function Home() {
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         />
         <motion.div 
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-blue-200/20 to-indigo-200/20 rounded-full blur-3xl"
           animate={{ 
             x: [0, -30, 0],
             y: [0, 20, 0]
@@ -131,7 +138,7 @@ export default function Home() {
           style={{ opacity: headerOpacity, scale: headerScale }}
           className="relative"
         >
-          <Badge className="mb-6 px-4 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 border-0">
+          <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 border-0 text-white">
             <Sparkles className="mr-2 h-4 w-4" />
             Powered by Solana
           </Badge>
@@ -142,12 +149,12 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <span className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-gray-900 via-teal-600 to-gray-900 bg-clip-text text-transparent">
               Human-Only
             </span>
             <br />
             <motion.span 
-              className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent"
+              className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent"
               animate={{ backgroundPosition: ["0%", "100%", "0%"] }}
               transition={{ duration: 3, repeat: Infinity }}
               style={{ backgroundSize: "200% 100%" }}
@@ -157,14 +164,14 @@ export default function Home() {
           </motion.h1>
 
           <motion.p 
-            className="mt-8 text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed"
+            className="mt-8 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            A <span className="font-semibold text-cyan-300">Solana-powered</span> platform where jobs, 
+            A <span className="font-semibold text-teal-600">Solana-powered</span> platform where jobs, 
             hackathons, and opportunities receive applications only from 
-            <span className="font-semibold text-green-300"> real humans</span> — not bots.
+            <span className="font-semibold text-emerald-600"> real humans</span> — not bots.
           </motion.p>
 
           <motion.div 
@@ -176,7 +183,8 @@ export default function Home() {
             <motion.div variants={scaleIn}>
               <Button 
                 size="lg" 
-                className="relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 group overflow-hidden"
+                className="relative bg-gradient-to-r cursor-pointer from-gray-900 to-black hover:from-gray-800 hover:to-gray-900 group overflow-hidden text-white"
+                onClick={() => navigate("/auth")}
               >
                 <span className="relative z-10 flex items-center">
                   Apply as a User 
@@ -188,7 +196,7 @@ export default function Home() {
                   </motion.div>
                 </span>
                 <motion.div 
-                  className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 bg-gradient-to-r from-teal-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   initial={false}
                 />
               </Button>
@@ -198,7 +206,8 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-slate-700 text-white hover:bg-slate-900/50 backdrop-blur-sm"
+                onClick={() => navigate("/admin/auth")}
+                className="border-gray-300 cursor-pointer text-gray-700 hover:bg-gray-50 hover:border-gray-400"
               >
                 Post an Opportunity
                 <Rocket className="ml-3 h-5 w-5" />
@@ -221,15 +230,15 @@ export default function Home() {
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
             >
-              <Card className="bg-slate-900/40 backdrop-blur-sm border border-slate-800 hover:border-indigo-500/50 transition-all">
+              <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 hover:border-teal-300 transition-all shadow-lg">
                 <CardContent className="p-6 text-center">
-                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 mb-4">
-                    <div className="text-indigo-400">
+                  <div className={`inline-flex p-3 rounded-lg bg-gradient-to-br ${feature.color}/20 mb-4`}>
+                    <div className="text-teal-600">
                       {feature.icon}
                     </div>
                   </div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-sm text-slate-400 mt-2">{feature.desc}</p>
+                  <h3 className="font-semibold text-lg text-gray-900">{feature.title}</h3>
+                  <p className="text-sm text-gray-600 mt-2">{feature.desc}</p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -251,22 +260,22 @@ export default function Home() {
             whileInView={{ x: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-red-500 via-orange-500 to-transparent"
+            className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-red-400 via-orange-400 to-transparent"
           />
           
-          <Badge variant="destructive" className="mb-6">
+          <Badge variant="destructive" className="mb-6 bg-gradient-to-r from-red-500 to-orange-500 text-white">
             <Bot className="mr-2 h-4 w-4" />
             The Problem
           </Badge>
           
           <motion.h2 
-            className="text-4xl md:text-5xl font-bold leading-tight"
+            className="text-4xl md:text-5xl font-bold leading-tight text-gray-900"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
             AI is flooding every{" "}
-            <span className="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
               application pipeline
             </span>
           </motion.h2>
@@ -291,13 +300,13 @@ export default function Home() {
                 whileHover={{ x: 10 }}
               >
                 <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full mt-3 animate-pulse" />
-                <p className="text-lg text-slate-300">{item}</p>
+                <p className="text-lg text-gray-700">{item}</p>
               </motion.div>
             ))}
           </motion.div>
           
           <motion.p 
-            className="mt-10 text-2xl font-bold text-slate-200 p-6 bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-xl border border-red-900/30 backdrop-blur-sm"
+            className="mt-10 text-2xl font-bold text-gray-800 p-6 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200 backdrop-blur-sm"
             initial={{ scale: 0.95, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
@@ -314,22 +323,22 @@ export default function Home() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-transparent to-slate-900/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-50/40 via-transparent to-cyan-50/40" />
         
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500">
+            <Badge className="mb-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
               <CheckCircle className="mr-2 h-4 w-4" />
               The Solution
             </Badge>
             <motion.h2 
-              className="text-4xl md:text-6xl font-bold"
+              className="text-4xl md:text-6xl font-bold text-gray-900"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
               Proof that a{" "}
-              <span className="bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                 real human
               </span>{" "}
               applied
@@ -344,7 +353,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="lg:col-span-2"
             >
-              <Card className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 backdrop-blur-sm border border-slate-800 h-full">
+              <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-xl h-full">
                 <CardContent className="p-8">
                   <div className="space-y-6">
                     {[
@@ -361,10 +370,10 @@ export default function Home() {
                         viewport={{ once: true }}
                         transition={{ delay: index * 0.1 }}
                       >
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-green-500/20 to-cyan-500/20 flex items-center justify-center">
-                          <CheckCircle className="h-5 w-5 text-green-400" />
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+                          <CheckCircle className="h-5 w-5 text-emerald-600" />
                         </div>
-                        <span className="text-lg text-slate-300">{item}</span>
+                        <span className="text-lg text-gray-700">{item}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -378,19 +387,19 @@ export default function Home() {
               whileInView="animate"
               viewport={{ once: true }}
             >
-              <Card className="bg-gradient-to-br from-green-900/20 to-cyan-900/20 backdrop-blur-sm border border-green-800/30 h-full">
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 backdrop-blur-sm border border-emerald-200 shadow-xl h-full">
                 <CardContent className="p-8 flex flex-col items-center justify-center h-full text-center">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="mb-6"
                   >
-                    <div className="w-24 h-24 rounded-full border-4 border-green-500/30 border-t-green-500 flex items-center justify-center">
-                      <ShieldCheck className="h-12 w-12 text-green-400" />
+                    <div className="w-24 h-24 rounded-full border-4 border-emerald-200 border-t-emerald-500 flex items-center justify-center">
+                      <ShieldCheck className="h-12 w-12 text-emerald-600" />
                     </div>
                   </motion.div>
-                  <h3 className="text-2xl font-bold mb-4">Bot Prevention</h3>
-                  <p className="text-slate-400">
+                  <h3 className="text-2xl font-bold mb-4 text-gray-900">Bot Prevention</h3>
+                  <p className="text-gray-600">
                     We don't detect bots — we make spam impossible by design.
                   </p>
                 </CardContent>
@@ -403,14 +412,14 @@ export default function Home() {
       {/* ================= HOW IT WORKS ================= */}
       <section className="max-w-7xl mx-auto px-6 py-32">
         <div className="text-center mb-20">
-          <Badge variant="outline" className="mb-6">
+          <Badge variant="outline" className="mb-6 border-gray-300">
             <Zap className="mr-2 h-4 w-4" />
             How It Works
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Simple for <span className="text-indigo-400">everyone</span>,
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+            Simple for <span className="text-teal-600">everyone</span>,
             <br />
-            impossible for <span className="text-red-400">bots</span>
+            impossible for <span className="text-red-500">bots</span>
           </h2>
         </div>
 
@@ -427,19 +436,19 @@ export default function Home() {
               onHoverEnd={() => setHoveredCard(null)}
               className="relative"
             >
-              <Card className={`bg-gradient-to-br ${item.color}/10 to-slate-900/60 backdrop-blur-sm border border-slate-800 h-full transition-all duration-300 ${hoveredCard === index ? 'border-opacity-50' : 'border-opacity-20'}`}>
+              <Card className={`bg-gradient-to-br ${item.color}/10 to-white backdrop-blur-sm border border-gray-200 h-full transition-all duration-300 ${hoveredCard === index ? 'border-teal-300' : 'border-gray-200'}`}>
                 <CardContent className="p-8">
                   <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${item.color}/20 mb-6`}>
-                    <div className="text-white">
+                    <div className="text-gray-900">
                       {item.icon}
                     </div>
                   </div>
-                  <CardTitle className="text-xl mb-4">{item.title}</CardTitle>
+                  <CardTitle className="text-xl mb-4 text-gray-900">{item.title}</CardTitle>
                   <ul className="space-y-3">
                     {item.steps.map((step, i) => (
                       <motion.li 
                         key={i}
-                        className="flex items-center text-slate-300"
+                        className="flex items-center text-gray-700"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.1 }}
@@ -473,7 +482,7 @@ export default function Home() {
 
       {/* ================= SOLANA BENEFITS ================= */}
       <motion.section 
-        className="py-32 bg-gradient-to-r from-indigo-900/10 via-slate-900/10 to-purple-900/10"
+        className="py-32 bg-gradient-to-r from-teal-50 via-white to-cyan-50"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -486,7 +495,7 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ type: "spring", stiffness: 200 }}
           >
-            <div className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center space-x-3">
+            <div className="px-6 py-3 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center space-x-3 text-white">
               <Globe className="h-5 w-5" />
               <span className="font-semibold">Built on Solana</span>
               <Clock className="h-5 w-5" />
@@ -494,13 +503,13 @@ export default function Home() {
           </motion.div>
 
           <motion.h2 
-            className="text-4xl md:text-5xl font-bold text-center mb-16"
+            className="text-4xl md:text-5xl font-bold text-center mb-16 text-gray-900"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
             For speed, scale, and{" "}
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
               fairness
             </span>
           </motion.h2>
@@ -513,18 +522,18 @@ export default function Home() {
               className="space-y-6"
             >
               {[
-                { text: "Low fees → micro-verification possible", icon: "💸" },
-                { text: "Fast transactions → smooth UX", icon: "⚡" },
-                { text: "On-chain proof → transparent & verifiable", icon: "🔗" },
-                { text: "Non-transferable credentials → anti-bot by design", icon: "🛡️" }
+                { text: "Low fees → micro-verification possible", icon: "💸", color: "text-emerald-600" },
+                { text: "Fast transactions → smooth UX", icon: "⚡", color: "text-amber-600" },
+                { text: "On-chain proof → transparent & verifiable", icon: "🔗", color: "text-blue-600" },
+                { text: "Non-transferable credentials → anti-bot by design", icon: "🛡️", color: "text-gray-800" }
               ].map((item, index) => (
                 <motion.div 
                   key={index}
-                  className="flex items-center space-x-4 p-4 rounded-lg bg-slate-900/30 backdrop-blur-sm hover:bg-slate-800/30 transition-colors"
+                  className="flex items-center space-x-4 p-4 rounded-lg bg-white/80 backdrop-blur-sm hover:bg-white transition-colors border border-gray-200"
                   whileHover={{ x: 10 }}
                 >
                   <span className="text-2xl">{item.icon}</span>
-                  <span className="text-lg text-slate-300">{item.text}</span>
+                  <span className={`text-lg font-medium ${item.color}`}>{item.text}</span>
                 </motion.div>
               ))}
             </motion.div>
@@ -535,24 +544,60 @@ export default function Home() {
               viewport={{ once: true }}
               className="flex items-center justify-center"
             >
-              <Card className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-sm border border-indigo-800/30">
+              <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 backdrop-blur-sm border border-teal-200 shadow-xl">
                 <CardContent className="p-8 text-center">
                   <motion.div
                     animate={{ rotate: [0, 360] }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="mb-6"
                   >
-                    <div className="w-32 h-32 mx-auto rounded-full border-4 border-indigo-500/20 border-t-indigo-500 flex items-center justify-center">
-                      <Zap className="h-16 w-16 text-indigo-400" />
+                    <div className="w-32 h-32 mx-auto rounded-full border-4 border-teal-200 border-t-teal-500 flex items-center justify-center">
+                      <Zap className="h-16 w-16 text-teal-600" />
                     </div>
                   </motion.div>
-                  <h3 className="text-2xl font-bold mb-4">Blockchain Enforcement</h3>
-                  <p className="text-slate-400">
+                  <h3 className="text-2xl font-bold mb-4 text-gray-900">Blockchain Enforcement</h3>
+                  <p className="text-gray-600">
                     Not a buzzword — it's the trust layer that makes human-only applications possible.
                   </p>
                 </CardContent>
               </Card>
             </motion.div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ================= CTA WITH FEATURES ================= */}
+      <motion.section 
+        className="max-w-6xl mx-auto px-6 py-20"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        <div className="text-center mb-16">
+          <h3 className="text-3xl font-bold text-gray-900 mb-6">What You Get</h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: <Eye className="h-8 w-8" />, title: "Zero Spam", desc: "Only verified human applications", color: "text-emerald-600", bg: "bg-emerald-50" },
+              { icon: <Network className="h-8 w-8" />, title: "Solana Speed", desc: "Fast, low-cost transactions", color: "text-cyan-600", bg: "bg-cyan-50" },
+              { icon: <FileText className="h-8 w-8" />, title: "Easy Management", desc: "Simple dashboard for all tasks", color: "text-gray-800", bg: "bg-gray-50" }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="text-center"
+              >
+                <div className={`${item.bg} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
+                  <div className={item.color}>
+                    {item.icon}
+                  </div>
+                </div>
+                <h4 className="font-bold text-lg text-gray-900">{item.title}</h4>
+                <p className="text-gray-600">{item.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </motion.section>
@@ -569,25 +614,25 @@ export default function Home() {
           animate="animate"
           className="inline-block"
         >
-          <div className="px-8 py-4 rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 mb-8 border border-indigo-500/30">
-            <span className="text-lg text-indigo-300">Ready to join the future?</span>
+          <div className="px-8 py-4 rounded-full bg-gradient-to-r from-teal-100 via-cyan-100 to-blue-100 mb-8 border border-teal-200">
+            <span className="text-lg text-teal-700 font-medium">Ready to join the future?</span>
           </div>
         </motion.div>
 
         <motion.h2 
-          className="text-5xl md:text-6xl font-bold mb-8"
+          className="text-5xl md:text-6xl font-bold mb-8 text-gray-900"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
           The future of applications is{" "}
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
             human-verified
           </span>
         </motion.h2>
 
         <motion.p 
-          className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto"
+          className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -606,7 +651,8 @@ export default function Home() {
           <motion.div variants={scaleIn}>
             <Button 
               size="lg" 
-              className="px-12 py-6 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 group"
+              onClick={() => navigate("/auth")}
+              className="px-12 py-6 cursor-pointer text-lg bg-gradient-to-r from-gray-900 to-black hover:from-gray-800 hover:to-gray-900 text-white group"
             >
               <motion.span
                 animate={{ x: [0, 5, 0] }}
@@ -623,7 +669,8 @@ export default function Home() {
             <Button
               size="lg"
               variant="outline"
-              className="px-12 py-6 text-lg border-2 border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 backdrop-blur-sm"
+              onClick={() => navigate("/admin/auth")}
+              className="px-12 py-6 cursor-pointer text-lg border-2 border-gray-300 hover:border-teal-500 hover:bg-teal-50 hover:text-teal-700"
             >
               <Rocket className="mr-3 h-5 w-5" />
               Post an Opportunity
@@ -632,19 +679,19 @@ export default function Home() {
         </motion.div>
 
         <motion.div 
-          className="mt-20 pt-10 border-t border-slate-800"
+          className="mt-20 pt-10 border-t border-gray-200"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-slate-500">
-            <motion.span whileHover={{ scale: 1.05 }}>Zero spam guarantee</motion.span>
-            <div className="w-1 h-1 bg-slate-700 rounded-full" />
-            <motion.span whileHover={{ scale: 1.05 }}>Solana-powered</motion.span>
-            <div className="w-1 h-1 bg-slate-700 rounded-full" />
-            <motion.span whileHover={{ scale: 1.05 }}>100% human applications</motion.span>
-            <div className="w-1 h-1 bg-slate-700 rounded-full" />
-            <motion.span whileHover={{ scale: 1.05 }}>Open for all</motion.span>
+          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500">
+            <motion.span whileHover={{ scale: 1.05 }} className="hover:text-gray-700">Zero spam guarantee</motion.span>
+            <div className="w-1 h-1 bg-gray-300 rounded-full" />
+            <motion.span whileHover={{ scale: 1.05 }} className="hover:text-gray-700">Solana-powered</motion.span>
+            <div className="w-1 h-1 bg-gray-300 rounded-full" />
+            <motion.span whileHover={{ scale: 1.05 }} className="hover:text-gray-700">100% human applications</motion.span>
+            <div className="w-1 h-1 bg-gray-300 rounded-full" />
+            <motion.span whileHover={{ scale: 1.05 }} className="hover:text-gray-700">Open for all</motion.span>
           </div>
         </motion.div>
       </motion.section>
