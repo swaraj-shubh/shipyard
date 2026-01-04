@@ -2,20 +2,46 @@
 import mongoose from "mongoose";
 
 const answerSchema = new mongoose.Schema({
-  questionId: String,
-  value: mongoose.Schema.Types.Mixed
+  questionId: {
+    type: String,
+    required: true,
+  },
+  value: mongoose.Schema.Types.Mixed,
 });
 
-const formResponseSchema = new mongoose.Schema({
-  formId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Form"
+const verificationSchema = new mongoose.Schema(
+  {
+    netScore: {
+      type: Number,
+      required: true,
+    },
+    passed: {
+      type: Boolean,
+      required: true,
+    },
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+  { _id: false }
+);
+
+const formResponseSchema = new mongoose.Schema(
+  {
+    formId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Form",
+      required: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    answers: {
+      type: [answerSchema],
+      required: true,
+    },
+    verification: verificationSchema, // ✅ FIX
   },
-  answers: [answerSchema]
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("FormResponse", formResponseSchema);

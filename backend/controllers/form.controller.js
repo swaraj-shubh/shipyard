@@ -21,17 +21,17 @@ export const createForm = async (req, res) => {
 
     // 2. Create the form with blockchain metadata
     const form = await Form.create({
-      title,
-      type,
-      description,
-      questions,
-      createdBy: req.user.id,
-      reward: reward || 0,
-      escrowAddress: escrowAddress || null,
-      txHash: txHash || null,
-      taskHash: taskHash || null,
-      organiserWallet: organiser || null
-    });
+  title,
+  type,
+  description,
+  questions,
+  createdBy: req.user.id,
+  reward: Number(reward) || 0,
+  escrowAddress: escrowAddress || null,
+  txHash: txHash || null,
+  taskHash: taskHash || null,
+  organiserWallet: organiser || null,
+});
 
     res.status(201).json(form);
   } catch (err) {

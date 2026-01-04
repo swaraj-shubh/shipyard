@@ -4,7 +4,7 @@ import FormResponse from "../models/FormResponse.js";
 
 export const submitForm = async (req, res) => {
   try {
-    const { answers } = req.body;
+    const { answers, verification } = req.body; // ✅ FIX
     const { formId } = req.params;
 
     const form = await Form.findById(formId);
@@ -12,7 +12,6 @@ export const submitForm = async (req, res) => {
       return res.status(404).json({ message: "Form not found" });
     }
 
-    // Prevent duplicate submission
     const alreadySubmitted = await FormResponse.findOne({
       formId,
       userId: req.user.id,
@@ -26,14 +25,19 @@ export const submitForm = async (req, res) => {
       formId,
       userId: req.user.id,
       answers,
+      verification, // ✅ STORE SCORE
     });
 
-    res.status(201).json({ message: "Form submitted successfully", response });
+    res.status(201).json({
+      message: "Form submitted successfully",
+      response,
+    });
   } catch (err) {
     console.error("Submit form error:", err);
     res.status(500).json({ message: "Failed to submit form" });
   }
 };
+
 
 export const getMySubmissions = async (req, res) => {
   try {
