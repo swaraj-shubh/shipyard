@@ -2,43 +2,29 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Wallet, Loader2, AlertCircle } from "lucide-react";
 import bs58 from "bs58";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 const AdminAuth = () => {
+  const { publicKey, signMessage, connected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
   const navigate = useNavigate();
 
   const BASE_URL =
     import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
-  // 🔐 Connect Phantom Wallet
-  const connectWallet = async () => {
-    try {
-      if (!window.solana || !window.solana.isPhantom) {
-        throw new Error("Phantom wallet not found");
-      }
-
-      const res = await window.solana.connect();
-      const pubKey = res.publicKey.toBase58();
-      setWalletAddress(pubKey);
-      setError("");
-      return pubKey;
-    } catch (err) {
-      setError(err.message || "Wallet connection failed");
-      return null;
-    }
-  };
-
-  // 🔑 Wallet Login (Nonce + Signature)
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const publicKey = walletAddress || (await connectWallet());
-      if (!publicKey) return;
+      if (!connected || !publicKey) {
+        throw new Error("Please connect Phantom wallet");
+      }
+
+      const walletAddress = publicKey.toBase58();
 
       // 1️⃣ Request nonce
       const nonceRes = await fetch(
@@ -46,7 +32,7 @@ const AdminAuth = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ solanaPublicKey: publicKey }),
+          body: JSON.stringify({ solanaPublicKey: walletAddress }),
         }
       );
 
@@ -55,7 +41,7 @@ const AdminAuth = () => {
 
       // 2️⃣ Sign nonce
       const encoded = new TextEncoder().encode(nonceData.nonce);
-      const signed = await window.solana.signMessage(encoded);
+      const signature = await signMessage(encoded);
 
       // 3️⃣ Verify signature
       const verifyRes = await fetch(
@@ -64,8 +50,8 @@ const AdminAuth = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            solanaPublicKey: publicKey,
-            signature: bs58.encode(signed.signature),
+            solanaPublicKey: walletAddress,
+            signature: bs58.encode(signature),
           }),
         }
       );
@@ -109,33 +95,23 @@ const AdminAuth = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <button
-              type="button"
-              onClick={connectWallet}
-              className="w-full flex items-center justify-center gap-2 border py-3 rounded-lg"
-            >
-              <Wallet size={18} />
-              {walletAddress
-                ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-                : "Connect Phantom Wallet"}
-            </button>
+          {/* ✅ Wallet Adapter Button */}
+          <WalletMultiButton className="w-full mb-4" />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg flex justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Verifying...
-                </>
-              ) : (
-                "Access Admin Dashboard"
-              )}
-            </button>
-          </form>
+          <button
+            onClick={handleLogin}
+            disabled={loading}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg flex justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={20} />
+                Verifying...
+              </>
+            ) : (
+              "Access Admin Dashboard"
+            )}
+          </button>
         </div>
       </div>
     </div>

@@ -1,14 +1,27 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+/* 🔗 Solana */
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { createEscrow } from "../../solana/createEscrow";
+
+/* 🧩 UI */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui/select";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
+const API_BASE =
+  import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
 const QUESTION_TYPES = [
   "text",
@@ -21,8 +34,12 @@ const QUESTION_TYPES = [
 ];
 
 export default function AdminDashboard() {
+  const wallet = useWallet();
+  const { connection } = useConnection();
+
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [reward, setReward] = useState(0);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -31,17 +48,15 @@ export default function AdminDashboard() {
     questions: [],
   });
 
-  // ================= FETCH ADMIN FORMS =================
+  /* ================= FETCH FORMS ================= */
   const fetchForms = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      console.log("Using token:", token);
       const res = await axios.get(`${API_BASE}/forms/admin/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setForms(res.data);
-    } catch (err) {
+    } catch {
       alert("Failed to fetch forms");
     }
   };
@@ -50,20 +65,21 @@ export default function AdminDashboard() {
     fetchForms();
   }, []);
 
-  // ================= QUESTION HANDLERS =================
+  /* ================= QUESTIONS ================= */
   const addQuestion = () => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       questions: [
-        ...formData.questions,
+        ...prev.questions,
         {
+          id: crypto.randomUUID(),
           label: "",
           type: "text",
           required: false,
           options: [],
         },
       ],
-    });
+    }));
   };
 
   const updateQuestion = (index, field, value) => {
@@ -84,35 +100,69 @@ export default function AdminDashboard() {
     setFormData({ ...formData, questions: updated });
   };
 
-  // ================= CREATE FORM =================
-  const handleCreateForm = async () => {
-    if (!formData.title || !formData.type || !formData.questions.length) {
-      alert("Title, type, and at least one question required");
-      return;
-    }
+  /* ================= CREATE FORM + ESCROW ================= */
+  /* Inside AdminDashboard.jsx -> handleCreateForm */
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("adminToken");
+const handleCreateForm = async () => {
+  // ... (validation logic)
 
-      await axios.post(`${API_BASE}/forms`, formData, {
-        headers: { Authorization: `Bearer ${token}` },
+  setLoading(true);
+  // Unique task hash used for the PDA seed
+  const taskHash = `${formData.title}-${Date.now()}`;
+
+  try {
+    let escrowAddress = null;
+    let txHash = null;
+
+    if (reward > 0) {
+      // 1. Execute Solana Transaction
+      const res = await createEscrow({
+        wallet,
+        connection,
+        rewardSOL: reward,
+        taskHash,
       });
 
-      alert("Form created successfully");
-      setFormData({ title: "", type: "", description: "", questions: [] });
-      fetchForms();
-    } catch (err) {
-      alert(err.response?.data?.message || "Form creation failed");
-    } finally {
-      setLoading(false);
+      // 2. Capture the results from the blockchain
+      escrowAddress = res.escrowAddress;
+      txHash = res.txHash;
     }
-  };
 
-  // ================= UI =================
+    const token = localStorage.getItem("adminToken");
+
+    // 3. Send everything to the Backend
+    await axios.post(
+      `${API_BASE}/forms`,
+      {
+        ...formData,
+        reward,             // The amount in SOL
+        escrowAddress,      // The PDA address (Public Key)
+        txHash,             // The transaction signature for verification
+        taskHash,           // The raw string used to generate the seed
+        organiser: wallet.publicKey?.toBase58() || null,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    alert("✅ Task + Form created successfully and saved to backend");
+    // ... (reset state logic)
+  } catch (err) {
+    console.error("Backend or Solana Error:", err);
+    alert(err.message || "Creation failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  /* ================= UI ================= */
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+
+      {/* 🔐 WALLET */}
+      <WalletMultiButton />
 
       {/* CREATE FORM */}
       <Card className="bg-slate-900 border border-slate-700">
@@ -134,6 +184,7 @@ export default function AdminDashboard() {
           <div>
             <Label>Type</Label>
             <Select
+              value={formData.type}
               onValueChange={(val) =>
                 setFormData({ ...formData, type: val })
               }
@@ -155,17 +206,40 @@ export default function AdminDashboard() {
             <Textarea
               value={formData.description}
               onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+                setFormData({
+                  ...formData,
+                  description: e.target.value,
+                })
               }
             />
           </div>
 
-          {/* QUESTIONS */}
+          {/* 💰 REWARD */}
+          <div>
+            <Label>Reward (SOL)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.1"
+              value={reward}
+              onChange={(e) => setReward(Number(e.target.value))}
+            />
+            {reward > 0 && (
+              <p className="text-xs text-yellow-400 mt-1">
+                Paid task → SOL locked in escrow
+              </p>
+            )}
+          </div>
+
+          {/* ================= QUESTIONS ================= */}
           <div className="space-y-4">
             <Label>Questions</Label>
 
             {formData.questions.map((q, index) => (
-              <Card key={index} className="bg-slate-800 p-4 space-y-2">
+              <Card
+                key={q.id}
+                className="bg-slate-800 p-4 space-y-2"
+              >
                 <Input
                   placeholder="Question label"
                   value={q.label}
@@ -192,12 +266,16 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
 
-                <label className="flex gap-2 items-center">
+                <label className="flex gap-2 items-center text-sm">
                   <input
                     type="checkbox"
                     checked={q.required}
                     onChange={(e) =>
-                      updateQuestion(index, "required", e.target.checked)
+                      updateQuestion(
+                        index,
+                        "required",
+                        e.target.checked
+                      )
                     }
                   />
                   Required
@@ -222,7 +300,7 @@ export default function AdminDashboard() {
                       variant="secondary"
                       onClick={() => addOption(index)}
                     >
-                      Add Option
+                      + Add Option
                     </Button>
                   </div>
                 )}
@@ -241,32 +319,6 @@ export default function AdminDashboard() {
           >
             {loading ? "Creating..." : "Create Form"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* MY FORMS */}
-      <Card className="bg-slate-900 border border-slate-700">
-        <CardHeader>
-          <CardTitle>My Created Forms</CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {forms.length === 0 && (
-            <p className="text-slate-400">No forms created yet</p>
-          )}
-
-          {forms.map((f) => (
-            <div
-              key={f._id}
-              className="p-3 border border-slate-700 rounded"
-            >
-              <p className="font-semibold">{f.title}</p>
-              <p className="text-sm text-slate-400">{f.type}</p>
-              <p className="text-xs text-slate-500">
-                Questions: {f.questions.length}
-              </p>
-            </div>
-          ))}
         </CardContent>
       </Card>
     </div>

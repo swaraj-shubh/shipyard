@@ -1,4 +1,3 @@
-// models/Form.js
 import mongoose from "mongoose";
 
 const questionSchema = new mongoose.Schema({
@@ -24,7 +23,16 @@ const formSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  questions: [questionSchema]
+  questions: [questionSchema],
+  
+  // --- ADDED SOLANA FIELDS ---
+  reward: { type: Number, default: 0 },         // SOL amount
+  escrowAddress: { type: String, default: null }, // The PDA Public Key
+  txHash: { type: String, default: null },        // Transaction Signature
+  taskHash: { type: String, default: null },      // Seed used for PDA
+  organiserWallet: { type: String, default: null } // Admin's Solana address
+  // ---------------------------
+
 }, { timestamps: true });
 
 export default mongoose.model("Form", formSchema);

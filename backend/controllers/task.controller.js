@@ -34,6 +34,29 @@ export const createTask = async (req, res) => {
     res.status(500).json({ error: "IPFS upload failed" });
   }
 };
+import express from "express";
+import crypto from "crypto";
+
+const router = express.Router();
+
+const tasks = []; // replace with DB
+
+router.post("/create", (req, res) => {
+  const { title, reward, escrowAddress } = req.body;
+
+  const task = {
+    id: crypto.randomUUID(),
+    title,
+    reward,
+    escrowAddress: reward > 0 ? escrowAddress : null,
+    type: reward > 0 ? "PAID" : "FREE",
+  };
+
+  tasks.push(task);
+  res.json(task);
+});
+
+export default router;
 
 /**
  * GET TASK → fetch JSON from IPFS

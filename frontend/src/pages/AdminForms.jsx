@@ -1,107 +1,112 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { createEscrow } from "../../solana/createEscrow";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+export default function AdminCreateTask() {
+  const [title, setTitle] = useState("");
+  const [reward, setReward] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-const API_BASE = import.meta.env.VITE_BACKEND_API;
+  const wallet = useWallet();
+  const { connection } = useConnection();
 
-export default function AdminForms() {
-  const [forms, setForms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const createTask = async () => {
+    if (!title.trim()) {
+      alert("Please enter a task title");
+      return;
+    }
 
-  useEffect(() => {
-    const fetchAdminForms = async () => {
-      try {
-        const token = localStorage.getItem("adminToken");
+    if (reward > 0 && !wallet.connected) {
+      alert("Please connect your wallet for paid tasks");
+      return;
+    }
 
-        if (!token) {
-          alert("Admin not authenticated");
-          return;
-        }
+    setIsSubmitting(true);
 
-        const res = await axios.get(
-          `${API_BASE}/forms/admin/mine`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+    try {
+      let escrowAddress = null;
 
-        setForms(res.data);
-      } catch (err) {
-        console.error(err);
-        alert("Failed to fetch admin forms");
-      } finally {
-        setLoading(false);
+      /* ---------------- PAID TASK FLOW ---------------- */
+      if (reward > 0) {
+        console.log("🔔 Paid task detected, opening Phantom…");
+
+        const res = await createEscrow({
+          wallet,
+          connection,
+          rewardSOL: reward,
+        });
+
+        escrowAddress = res.escrowAddress;
       }
-    };
 
-    fetchAdminForms();
-  }, []);
+      /* ---------------- BACKEND SYNC ---------------- */
+      await axios.post("/api/task/create", {
+        title,
+        reward,
+        escrowAddress,
+        organiser: wallet.publicKey?.toBase58() || null,
+      });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading forms...
-      </div>
-    );
-  }
+      alert("✅ Task created successfully!");
+      setTitle("");
+      setReward(0);
+    } catch (err) {
+      console.error("Create task error:", err);
+      alert(err.message || "Task creation failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">My Created Forms</h1>
+    <div className="max-w-md mx-auto p-6 space-y-5 bg-slate-800 rounded-xl shadow-lg">
+      <h2 className="text-xl font-semibold text-white">
+        Create New Task
+      </h2>
 
-      {forms.length === 0 && (
-        <p className="text-slate-400">
-          You haven’t created any forms yet.
+      {/* 🔐 WALLET CONNECT */}
+      <WalletMultiButton className="w-full justify-center" />
+
+      {/* 📝 TITLE */}
+      <input
+        className="block w-full p-2 bg-slate-700 text-white rounded"
+        placeholder="Task title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+
+      {/* 💰 REWARD */}
+      <input
+        className="block w-full p-2 bg-slate-700 text-white rounded"
+        type="number"
+        step="0.1"
+        min="0"
+        placeholder="Reward in SOL (0 = free)"
+        value={reward}
+        onChange={(e) => setReward(Number(e.target.value))}
+      />
+
+      {/* ℹ️ INFO */}
+      {reward > 0 && (
+        <p className="text-sm text-yellow-400">
+          Paid task → Phantom wallet will open to lock funds in escrow
         </p>
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {forms.map((form) => (
-          <Card
-            key={form._id}
-            className="bg-slate-900 border border-slate-700 hover:border-indigo-500 transition cursor-pointer"
-            onClick={() =>
-              navigate(`/admin/form/${form._id}/responses`)
-            }
-          >
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {form.title}
-              </CardTitle>
-              <p className="text-sm text-slate-400">
-                {form.type}
-              </p>
-            </CardHeader>
-
-            <CardContent className="space-y-2">
-              <p className="text-sm text-slate-300 line-clamp-3">
-                {form.description || "No description provided"}
-              </p>
-
-              <p className="text-xs text-slate-500">
-                Questions: {form.questions.length}
-              </p>
-
-              <Button
-                variant="secondary"
-                className="w-full mt-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/admin/form/${form._id}/responses`);
-                }}
-              >
-                View Responses
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* 🚀 SUBMIT */}
+      <button
+        className={`w-full px-4 py-2 rounded text-white ${
+          isSubmitting
+            ? "bg-gray-500"
+            : "bg-indigo-600 hover:bg-indigo-500"
+        }`}
+        onClick={createTask}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Processing…" : "Create Task"}
+      </button>
     </div>
   );
 }

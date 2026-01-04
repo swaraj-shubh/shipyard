@@ -1,0 +1,22 @@
+[toolchain]
+
+[workspace]
+members = ["programs/*"]
+
+[package]
+name = "shipyard"
+version = "0.1.0"
+description = "Proof of Human escrow program"
+
+[programs.localnet]
+proof_of_human = "GD3rPe9P8NfsJZ1m4dcsqTBJpodc956hB4AJydjvakdA"
+
+[programs.devnet]
+proof_of_human = "GD3rPe9P8NfsJZ1m4dcsqTBJpodc956hB4AJydjvakdA"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

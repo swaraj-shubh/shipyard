@@ -25,6 +25,12 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "taskHash",
+          "type": {
+            "array": ["u8", 32]
+          }
         }
       ]
     },
@@ -62,6 +68,12 @@
           {
             "name": "isReleased",
             "type": "bool"
+          },
+          {
+            "name": "taskHash",
+            "type": {
+              "array": ["u8", 32]
+            }
           }
         ]
       }
@@ -75,6 +87,6 @@
     }
   ],
   "metadata": {
-    "address": "8sxozZKArZLFDzvoqaAQij1X1R1fgEJqDvnGmR13sP4x"
+    "address": "3y31A2BrBSMQ6unaBmXxuT9ZiArsxCkbW1RXf4vmnxX4"
   }
 }

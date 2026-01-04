@@ -1,20 +1,36 @@
-// controllers/form.controller.js
 import Form from "../models/Form.js";
 
 export const createForm = async (req, res) => {
   try {
-    const { title, type, description, questions } = req.body;
+    // 1. Destructure the new Solana fields from the request body
+    const { 
+      title, 
+      type, 
+      description, 
+      questions, 
+      reward, 
+      escrowAddress, 
+      txHash, 
+      taskHash, 
+      organiser 
+    } = req.body;
 
     if (!title || !type || !questions || !questions.length) {
       return res.status(400).json({ message: "Invalid form data" });
     }
 
+    // 2. Create the form with blockchain metadata
     const form = await Form.create({
       title,
       type,
       description,
       questions,
-      createdBy: req.user.id, // admin id
+      createdBy: req.user.id,
+      reward: reward || 0,
+      escrowAddress: escrowAddress || null,
+      txHash: txHash || null,
+      taskHash: taskHash || null,
+      organiserWallet: organiser || null
     });
 
     res.status(201).json(form);
@@ -24,10 +40,11 @@ export const createForm = async (req, res) => {
   }
 };
 
+// Update getAllForms to include reward info so users know it's a paid task
 export const getAllForms = async (req, res) => {
   try {
     const forms = await Form.find({ isActive: true })
-      .select("title type description createdAt");
+      .select("title type description reward escrowAddress createdAt");
 
     res.json(forms);
   } catch (err) {
@@ -35,6 +52,8 @@ export const getAllForms = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch forms" });
   }
 };
+
+// ... keep other functions (getFormById, updateForm, etc.) as they are
 
 export const getFormById = async (req, res) => {
   try {
