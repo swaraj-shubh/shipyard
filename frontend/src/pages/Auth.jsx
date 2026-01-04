@@ -64,6 +64,7 @@ const UserAuth = () => {
       localStorage.setItem("role", "user");
 
       navigate("/dashboard");
+      window.location.reload();
     } catch (err) {
       setError(err.message || "Registration failed");
     } finally {
@@ -112,6 +113,7 @@ const UserAuth = () => {
       localStorage.setItem("role", "user");
 
       navigate("/dashboard");
+      window.location.reload();
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {

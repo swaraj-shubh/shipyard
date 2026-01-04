@@ -67,7 +67,7 @@ function Navbar() {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-            Shipyard
+            Abyss
           </span>
         </Link>
 

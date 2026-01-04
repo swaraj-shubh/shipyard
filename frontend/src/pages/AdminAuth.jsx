@@ -64,6 +64,7 @@ const AdminAuth = () => {
       localStorage.setItem("role", "admin");
 
       navigate("/admin/dashboard");
+      window.location.reload();
     } catch (err) {
       setError(err.message || "Admin login failed");
     } finally {

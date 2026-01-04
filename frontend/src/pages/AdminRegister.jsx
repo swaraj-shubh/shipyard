@@ -60,6 +60,7 @@ const AdminRegister = () => {
       localStorage.setItem("role", "admin");
 
       navigate("/admin/dashboard");
+      window.location.reload();
     } catch (err) {
       setError(err.message || "Admin registration failed");
     } finally {
