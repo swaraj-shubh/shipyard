@@ -9,8 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Shield, Camera, Activity, Loader2 } from "lucide-react";
 
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
+/* -------------------------------------------------------------------------- */
+/* CONFIG */
+/* -------------------------------------------------------------------------- */
+
+const API_BASE_URL =
+  import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
 const THRESHOLDS = {
   MIN_MOUSE_VELOCITY: 5,
@@ -22,16 +26,41 @@ const THRESHOLDS = {
   CHECK_INTERVAL: 6000,
 };
 
+const MIN_NET_SCORE = 70;
+
+/* -------------------------------------------------------------------------- */
+/* COMPONENT */
+/* -------------------------------------------------------------------------- */
+
 export default function DynamicForm() {
-  // Get formId from URL (e.g., /form/123abc or ?formId=123abc)
+  /* ----------------------------- HELPERS ----------------------------- */
+
+  const handleChange = (id, value) => {
+    setAnswers((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 85) return "text-green-500";
+    if (score >= 70) return "text-yellow-500";
+    return "text-red-500";
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= 90) return "Exceptional";
+    if (score >= 80) return "Trusted";
+    if (score >= 70) return "Verified";
+    return "Suspicious";
+  };
+
   const getFormId = () => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('formId') || window.location.pathname.split('/').pop();
+    return params.get("formId") || window.location.pathname.split("/").pop();
   };
 
   const formId = getFormId();
 
-  // State
+  /* ----------------------------- STATE ----------------------------- */
+
   const [form, setForm] = useState(null);
   const [formLoading, setFormLoading] = useState(true);
   const [formError, setFormError] = useState(null);
@@ -41,14 +70,23 @@ export default function DynamicForm() {
   const [initError, setInitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Refs
+  const [liveStats, setLiveStats] = useState({
+    checks: 0,
+    faceDetectionRate: 0,
+    avgMouseActivity: 0,
+    overallScore: 100,
+    sessionDuration: 0,
+  });
+
+  /* ----------------------------- REFS ----------------------------- */
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const modelRef = useRef(null);
   const timeoutRef = useRef(null);
   const startTimeRef = useRef(Date.now());
   const surveillanceRef = useRef({ running: false });
-  
+
   const intervalDataRef = useRef({
     mouseMoves: 0,
     mousePositions: [],
@@ -60,208 +98,112 @@ export default function DynamicForm() {
     faceDetections: [],
     mouseVelocities: [],
     behaviorScores: [],
-    timestamps: [],
   });
 
-  const [liveStats, setLiveStats] = useState({
-    checks: 0,
-    faceDetectionRate: 0,
-    avgMouseActivity: 0,
-    overallScore: 100,
-    sessionDuration: 0,
-  });
+  /* -------------------------------------------------------------------------- */
+  /* FETCH FORM */
+  /* -------------------------------------------------------------------------- */
 
-  /* ---------------- FETCH FORM FROM BACKEND ---------------- */
   useEffect(() => {
     const fetchForm = async () => {
       try {
-        setFormLoading(true);
-        const response = await fetch(`${API_BASE_URL}/forms/${formId}`);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Form not found (${response.status})`);
-        }
-        
-        const data = await response.json();
-        
-        if (!data.isActive) {
-          throw new Error("This form is no longer active");
-        }
-        
+        const res = await fetch(`${API_BASE_URL}/forms/${formId}`);
+        if (!res.ok) throw new Error("Form not found");
+        const data = await res.json();
+        if (!data.isActive) throw new Error("Form inactive");
         setForm(data);
-        setFormError(null);
-      } catch (err) {
-        console.error("Failed to load form:", err);
-        setFormError(err.message);
+      } catch (e) {
+        setFormError(e.message);
       } finally {
         setFormLoading(false);
       }
     };
 
-    if (formId && formId !== 'form') {
-      fetchForm();
-    } else {
-      setFormError("No valid form ID provided in URL");
-      setFormLoading(false);
-    }
+    if (formId) fetchForm();
   }, [formId]);
 
-  /* ---------------- SCORING ENGINE ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /* SCORING */
+  /* -------------------------------------------------------------------------- */
+
   const calculateScore = useCallback(() => {
-    const metrics = metricsRef.current;
-    
-    if (metrics.faceDetections.length === 0) return 0;
+    const m = metricsRef.current;
+    if (!m.faceDetections.length) return 0;
 
-    const faceScore = metrics.faceDetections.reduce((sum, fd) => 
-      sum + (fd.present ? fd.confidence : 0), 0
-    ) / metrics.faceDetections.length;
+    const faceScore =
+      m.faceDetections.reduce(
+        (s, f) => s + (f.present ? f.confidence : 0),
+        0
+      ) / m.faceDetections.length;
 
-    let mouseScore = 0;
-    if (metrics.mouseVelocities.length > 0) {
-      const avgVelocity = metrics.mouseVelocities.reduce((a, b) => a + b, 0) / 
-                          metrics.mouseVelocities.length;
-      
-      if (avgVelocity < THRESHOLDS.MIN_MOUSE_VELOCITY) {
-        mouseScore = 0.3;
-      } else if (avgVelocity > THRESHOLDS.MAX_MOUSE_VELOCITY) {
-        mouseScore = 0.2;
-      } else {
-        mouseScore = Math.min(1, avgVelocity / 500);
-      }
-    }
+    const mouseAvg =
+      m.mouseVelocities.reduce((a, b) => a + b, 0) /
+      (m.mouseVelocities.length || 1);
 
-    let consistencyScore = 1.0;
-    if (metrics.behaviorScores.length > 2) {
-      const mean = metrics.behaviorScores.reduce((a, b) => a + b, 0) / 
-                   metrics.behaviorScores.length;
-      const variance = metrics.behaviorScores.reduce((sum, score) => 
-        sum + Math.pow(score - mean, 2), 0
-      ) / metrics.behaviorScores.length;
-      
-      consistencyScore = Math.max(0, 1 - variance);
-    }
+    const mouseScore =
+      mouseAvg < THRESHOLDS.MIN_MOUSE_VELOCITY
+        ? 0.3
+        : mouseAvg > THRESHOLDS.MAX_MOUSE_VELOCITY
+        ? 0.2
+        : 1;
 
-    const rawScore = (faceScore * 0.4) + (mouseScore * 0.3) + (consistencyScore * 0.3);
-    return Math.round(Math.min(100, Math.max(0, rawScore * 100)));
+    return Math.round((faceScore * 0.6 + mouseScore * 0.4) * 100);
   }, []);
 
-  /* ---------------- SURVEILLANCE CHECK ---------------- */
-  const runCheck = useCallback(async () => {
-    if (!surveillanceRef.current.running || !modelRef.current) return;
+  const getNetScore = () => calculateScore();
 
-    const checkStartTime = Date.now();
+  /* -------------------------------------------------------------------------- */
+  /* SURVEILLANCE */
+  /* -------------------------------------------------------------------------- */
+
+  const runCheck = useCallback(async () => {
+    if (!surveillanceRef.current.running) return;
+
     let facePresent = false;
     let faceConfidence = 0;
 
     try {
-      const video = videoRef.current;
-      if (video && video.readyState >= 2) {
-        const blazeface = await import("@tensorflow-models/blazeface");
-        if (!modelRef.current) {
-          modelRef.current = await blazeface.load();
-        }
-        
-        const predictions = await modelRef.current.estimateFaces(video, false);
-        
-        if (predictions && predictions.length > 0) {
-          facePresent = true;
-          faceConfidence = predictions[0].probability?.[0] || 0.9;
-
-          if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext("2d");
-            canvasRef.current.width = video.videoWidth;
-            canvasRef.current.height = video.videoHeight;
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-            predictions.forEach((p) => {
-              const [x, y] = p.topLeft;
-              const [x2, y2] = p.bottomRight;
-              
-              const color = faceConfidence > THRESHOLDS.FACE_CONFIDENCE_THRESHOLD 
-                ? "#22c55e" : "#eab308";
-              
-              ctx.strokeStyle = color;
-              ctx.lineWidth = 3;
-              ctx.strokeRect(x, y, x2 - x, y2 - y);
-              
-              ctx.fillStyle = color;
-              ctx.font = "16px monospace";
-              ctx.fillText(`${Math.round(faceConfidence * 100)}%`, x, y - 5);
-            });
-          }
-        } else if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext("2d");
-          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        }
+      const predictions = await modelRef.current.estimateFaces(
+        videoRef.current,
+        false
+      );
+      if (predictions.length) {
+        facePresent = true;
+        faceConfidence = predictions[0].probability?.[0] || 0.9;
       }
-    } catch (err) {
-      console.error("Face detection error:", err);
+    } catch {}
+
+    const interval = intervalDataRef.current;
+
+    if (Date.now() - interval.lastMouseTime > 4000) {
+      interval.suspiciousEvents++;
     }
 
-    const intervalData = intervalDataRef.current;
-    let mouseScore = 0;
     let avgVelocity = 0;
-
-    if (intervalData.mousePositions.length > 1) {
-      const velocities = [];
-      for (let i = 1; i < intervalData.mousePositions.length; i++) {
-        const prev = intervalData.mousePositions[i - 1];
-        const curr = intervalData.mousePositions[i];
-        const distance = Math.sqrt(
-          Math.pow(curr.x - prev.x, 2) + Math.pow(curr.y - prev.y, 2)
-        );
-        const timeDiff = (curr.time - prev.time) / 1000;
-        const velocity = timeDiff > 0 ? distance / timeDiff : 0;
-        velocities.push(velocity);
-      }
-
-      avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length;
-      metricsRef.current.mouseVelocities.push(avgVelocity);
-
-      if (intervalData.mouseMoves < THRESHOLDS.MIN_MOUSE_MOVES_PER_CHECK) {
-        mouseScore = 0.4;
-      } else if (intervalData.mouseMoves > THRESHOLDS.MAX_MOUSE_MOVES_PER_CHECK) {
-        mouseScore = 0.3;
-      } else if (avgVelocity > THRESHOLDS.MAX_MOUSE_VELOCITY) {
-        mouseScore = 0.2;
-      } else {
-        mouseScore = 1.0;
-      }
-
-      if (intervalData.suspiciousEvents > 0) {
-        mouseScore *= 0.5;
-      }
-    } else {
-      mouseScore = 0.3;
+    if (interval.mousePositions.length > 1) {
+      const v = interval.mousePositions;
+      avgVelocity =
+        Math.hypot(v.at(-1).x - v[0].x, v.at(-1).y - v[0].y) /
+        ((v.at(-1).time - v[0].time) / 1000);
     }
 
-    const intervalScore = (
-      (facePresent ? faceConfidence : 0) * 0.6 + 
-      mouseScore * 0.4
-    );
-
-    metricsRef.current.faceDetections.push({ 
-      present: facePresent, 
-      confidence: faceConfidence 
+    metricsRef.current.faceDetections.push({
+      present: facePresent,
+      confidence: faceConfidence,
     });
-    metricsRef.current.behaviorScores.push(intervalScore);
-    metricsRef.current.timestamps.push(checkStartTime);
 
-    const overallScore = calculateScore();
+    metricsRef.current.mouseVelocities.push(avgVelocity);
 
-    const faceDetectionRate = Math.round(
-      (metricsRef.current.faceDetections.filter(fd => fd.present).length / 
-       metricsRef.current.faceDetections.length) * 100
-    );
-
-    setLiveStats({
-      checks: metricsRef.current.faceDetections.length,
-      faceDetectionRate,
+    setLiveStats((prev) => ({
+      ...prev,
+      checks: prev.checks + 1,
+      faceDetectionRate: facePresent ? 100 : 0,
       avgMouseActivity: Math.round(avgVelocity),
-      overallScore,
-      sessionDuration: Math.round((Date.now() - startTimeRef.current) / 1000),
-    });
+      overallScore: calculateScore(),
+      sessionDuration: Math.round(
+        (Date.now() - startTimeRef.current) / 1000
+      ),
+    }));
 
     intervalDataRef.current = {
       mouseMoves: 0,
@@ -270,236 +212,145 @@ export default function DynamicForm() {
       lastMouseTime: Date.now(),
     };
 
-    if (surveillanceRef.current.running) {
-      const jitter = Math.random() * 2000 - 1000;
-      timeoutRef.current = setTimeout(runCheck, THRESHOLDS.CHECK_INTERVAL + jitter);
-    }
+    timeoutRef.current = setTimeout(runCheck, THRESHOLDS.CHECK_INTERVAL);
   }, [calculateScore]);
 
-  /* ---------------- INIT SECURITY MONITORING ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /* INIT CAMERA */
+  /* -------------------------------------------------------------------------- */
+
   useEffect(() => {
-    if (!form || formLoading) return;
+    if (!form) return;
 
-    let stream = null;
-    let mounted = true;
+    let stream;
 
-    const init = async () => {
+    (async () => {
       try {
         await tf.setBackend("webgl");
         await tf.ready();
+        const bf = await import("@tensorflow-models/blazeface");
+        modelRef.current = await bf.load();
 
-        const blazeface = await import("@tensorflow-models/blazeface");
-        modelRef.current = await blazeface.load();
-
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: 640, 
-            height: 480, 
-            facingMode: "user" 
-          },
-        });
-
-        if (!mounted) return;
-
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
 
-        surveillanceRef.current.running = true;
-        startTimeRef.current = Date.now();
-        setSecurityReady(true);
-        
-        runCheck();
-      } catch (err) {
-        console.error("Initialization failed:", err);
-        setInitError(err.message);
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+          surveillanceRef.current.running = true;
+          startTimeRef.current = Date.now();
+          setSecurityReady(true);
+          runCheck();
+        };
+      } catch (e) {
+        setInitError(e.message);
       }
-    };
-
-    init();
+    })();
 
     const onMouse = (e) => {
-      intervalDataRef.current.mouseMoves++;
       intervalDataRef.current.mousePositions.push({
         x: e.clientX,
         y: e.clientY,
         time: Date.now(),
       });
-
-      if (intervalDataRef.current.mousePositions.length > 50) {
-        intervalDataRef.current.mousePositions.shift();
-      }
-
-      if (!e.isTrusted) {
-        intervalDataRef.current.suspiciousEvents++;
-      }
-
       intervalDataRef.current.lastMouseTime = Date.now();
     };
 
     window.addEventListener("mousemove", onMouse);
 
     return () => {
-      mounted = false;
       surveillanceRef.current.running = false;
       clearTimeout(timeoutRef.current);
       window.removeEventListener("mousemove", onMouse);
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
+      stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [form, formLoading, runCheck]);
+  }, [form, runCheck]);
 
-  /* ---------------- FORM HANDLERS ---------------- */
-  const handleChange = (qid, value) => {
-    setAnswers((prev) => ({ ...prev, [qid]: value }));
-  };
+  /* -------------------------------------------------------------------------- */
+  /* SUBMIT */
+  /* -------------------------------------------------------------------------- */
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (liveStats.checks < THRESHOLDS.MIN_CHECKS_REQUIRED) {
-      alert(`Please wait for security verification to complete. ${liveStats.checks}/${THRESHOLDS.MIN_CHECKS_REQUIRED} checks done.`);
-      return;
-    }
+    const netScore = getNetScore();
 
-    const missingFields = form.questions
-      .filter(q => q.required && !answers[q.id])
-      .map(q => q.label);
+    if (liveStats.checks < THRESHOLDS.MIN_CHECKS_REQUIRED)
+      return alert("Verification running");
 
-    if (missingFields.length > 0) {
-      alert(`Please fill required fields: ${missingFields.join(", ")}`);
-      return;
-    }
-
-    surveillanceRef.current.running = false;
-    clearTimeout(timeoutRef.current);
-
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-    }
+    if (netScore < MIN_NET_SCORE)
+      return alert("Score too low. Try again.");
 
     setShowReport(true);
   };
 
   const finalizeSubmission = async () => {
-    setSubmitting(true);
+  setSubmitting(true);
 
-    const submissionData = {
-      formId: formId,
-      responses: answers,
-      verification: {
-        score: liveStats.overallScore,
-        totalChecks: liveStats.checks,
-        faceDetectionRate: liveStats.faceDetectionRate,
-        sessionDuration: liveStats.sessionDuration,
-        avgMouseVelocity: liveStats.avgMouseActivity,
-        timestamp: new Date().toISOString(),
-        rawMetrics: {
-          faceDetections: metricsRef.current.faceDetections,
-          mouseVelocities: metricsRef.current.mouseVelocities,
-          behaviorScores: metricsRef.current.behaviorScores,
-        }
-      },
-    };
+  const netScore = getNetScore();
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/responses`, {
-        method: 'POST',
+  const formattedAnswers = Object.entries(answers).map(
+    ([questionId, value]) => ({
+      questionId,
+      value,
+    })
+  );
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/form-responses/${formId}/submit`,
+      {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(submissionData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Submission failed');
+        body: JSON.stringify({
+          answers: formattedAnswers,
+          verification: {
+            netScore,
+            passed: netScore >= MIN_NET_SCORE,
+          },
+        }),
       }
+    );
 
-      const result = await response.json();
-      console.log("Submission successful:", result);
-      
-      alert("Form submitted successfully!");
-      
-      // Optional: Redirect to thank you page
-      // window.location.href = '/thank-you';
-    } catch (err) {
-      console.error("Submission error:", err);
-      alert(`Failed to submit form: ${err.message}`);
-    } finally {
-      setSubmitting(false);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Submission failed");
     }
-  };
 
-  /* ---------------- RENDER ---------------- */
+    alert("Form submitted successfully");
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+
+  /* ---------------- UI (YOUR UI CONTINUES UNCHANGED BELOW) ---------------- */
+
   if (formLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6">
-        <Card className="max-w-md bg-slate-800 border-slate-700">
-          <CardContent className="pt-6 flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-            <h2 className="text-xl font-bold text-center">Loading Form...</h2>
-            <p className="text-slate-400 text-center text-sm">
-              Fetching form data from server
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-slate-900 text-white p-6 flex items-center justify-center">
+        <div className="text-center">Loading form...</div>
       </div>
     );
   }
 
-  if (formError || !form) {
+  if (formError) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6">
-        <Card className="max-w-md bg-slate-800 border-red-500">
-          <CardContent className="pt-6">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-center mb-2">Form Not Available</h2>
-            <p className="text-slate-400 text-center mb-4">
-              {formError || "The requested form could not be loaded."}
-            </p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-slate-900 text-white p-6 flex items-center justify-center">
+        <div className="max-w-md bg-slate-800 p-6 rounded">{formError}</div>
       </div>
     );
   }
 
-  if (initError) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6">
-        <Card className="max-w-md bg-slate-800 border-red-500">
-          <CardContent className="pt-6">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-center mb-2">Security System Error</h2>
-            <p className="text-slate-400 text-center">{initError}</p>
-            <p className="text-sm text-slate-500 text-center mt-4">
-              Please ensure camera permissions are granted and try again.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
-    if (score >= 40) return "text-orange-500";
-    return "text-red-500";
-  };
 
-  const getScoreLabel = (score) => {
-    if (score >= 80) return "Verified Human";
-    if (score >= 60) return "Likely Human";
-    if (score >= 40) return "Suspicious";
-    return "High Risk";
-  };
+
+
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 relative">

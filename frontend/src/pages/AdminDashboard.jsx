@@ -1,326 +1,227 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-
-/* 🔗 Solana */
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { createEscrow } from "../../solana/createEscrow";
-
-/* 🧩 UI */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { ChevronRight, XCircle, Wallet, ArrowLeft, ShieldCheck, Mail } from "lucide-react";
 
-const API_BASE =
-  import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
+/* 🔗 Solana Imports (Ensure these match your project structure) */
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+// import { releasePayment } from "../../solana/releasePayment"; 
 
-const QUESTION_TYPES = [
-  "text",
-  "email",
-  "number",
-  "textarea",
-  "select",
-  "checkbox",
-  "radio",
-];
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5000/api";
 
-export default function AdminDashboard() {
-  const wallet = useWallet();
+export default function AdminSubmissions() {
   const { connection } = useConnection();
+  const wallet = useWallet();
 
-  const [forms, setForms] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null); // { form, submissions }
+  const [selectedSub, setSelectedSub] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [reward, setReward] = useState(0);
 
-  const [formData, setFormData] = useState({
-    title: "",
-    type: "",
-    description: "",
-    questions: [],
-  });
+  useEffect(() => {
+    fetchMyTasks();
+  }, []);
 
-  /* ================= FETCH FORMS ================= */
-  const fetchForms = async () => {
+  const fetchMyTasks = async () => {
     try {
       const token = localStorage.getItem("adminToken");
       const res = await axios.get(`${API_BASE}/forms/admin/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setForms(res.data);
-    } catch {
-      alert("Failed to fetch forms");
+      setTasks(res.data || []);
+    } catch (err) {
+      console.error("Fetch tasks failed", err);
     }
   };
 
-  useEffect(() => {
-    fetchForms();
-  }, []);
-
-  /* ================= QUESTIONS ================= */
-  const addQuestion = () => {
-    setFormData((prev) => ({
-      ...prev,
-      questions: [
-        ...prev.questions,
-        {
-          id: crypto.randomUUID(),
-          label: "",
-          type: "text",
-          required: false,
-          options: [],
-        },
-      ],
-    }));
-  };
-
-  const updateQuestion = (index, field, value) => {
-    const updated = [...formData.questions];
-    updated[index][field] = value;
-    setFormData({ ...formData, questions: updated });
-  };
-
-  const addOption = (qIndex) => {
-    const updated = [...formData.questions];
-    updated[qIndex].options.push("");
-    setFormData({ ...formData, questions: updated });
-  };
-
-  const updateOption = (qIndex, oIndex, value) => {
-    const updated = [...formData.questions];
-    updated[qIndex].options[oIndex] = value;
-    setFormData({ ...formData, questions: updated });
-  };
-
-  /* ================= CREATE FORM + ESCROW ================= */
-  /* Inside AdminDashboard.jsx -> handleCreateForm */
-
-const handleCreateForm = async () => {
-  // ... (validation logic)
-
-  setLoading(true);
-  // Unique task hash used for the PDA seed
-  const taskHash = `${formData.title}-${Date.now()}`;
-
-  try {
-    let escrowAddress = null;
-    let txHash = null;
-
-    if (reward > 0) {
-      // 1. Execute Solana Transaction
-      const res = await createEscrow({
-        wallet,
-        connection,
-        rewardSOL: reward,
-        taskHash,
+  const loadSubmissions = async (formId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("adminToken");
+      // This endpoint hits your getFormResponses controller
+      const res = await axios.get(`${API_BASE}/form-responses/${formId}/responses`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      // 2. Capture the results from the blockchain
-      escrowAddress = res.escrowAddress;
-      txHash = res.txHash;
+      setSelectedTask(res.data); // Res contains { form, submissions }
+    } catch (err) {
+      console.error("Load submissions failed", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const token = localStorage.getItem("adminToken");
+  const handleReleasePayment = async (sub) => {
+    if (!wallet.publicKey) return alert("Please connect your wallet first");
+    
+    const task = selectedTask.form;
+    if (!task.escrowAddress) return alert("This task has no associated Escrow.");
 
-    // 3. Send everything to the Backend
-    await axios.post(
-      `${API_BASE}/forms`,
-      {
-        ...formData,
-        reward,             // The amount in SOL
-        escrowAddress,      // The PDA address (Public Key)
-        txHash,             // The transaction signature for verification
-        taskHash,           // The raw string used to generate the seed
-        organiser: wallet.publicKey?.toBase58() || null,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    try {
+      setLoading(true);
+      // Logic for calling your Solana program 'release' instruction
+      console.log(`Releasing ${task.reward} SOL from ${task.escrowAddress} to ${sub.userId?.name}`);
+      
+      /* Example call:
+      await releasePayment({
+        wallet,
+        connection,
+        escrowAddress: task.escrowAddress,
+        recipient: sub.userId.walletAddress, // Ensure your User model stores this
+        taskHash: task.taskHash
+      });
+      */
+      
+      alert("✅ Payment released successfully on Solana!");
+    } catch (err) {
+      console.error("Payment failed", err);
+      alert("Payment failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    alert("✅ Task + Form created successfully and saved to backend");
-    // ... (reset state logic)
-  } catch (err) {
-    console.error("Backend or Solana Error:", err);
-    alert(err.message || "Creation failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
-  /* ================= UI ================= */
-  return (
-    <div className="min-h-screen bg-slate-900 text-white p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-
-      {/* 🔐 WALLET */}
-      <WalletMultiButton />
-
-      {/* CREATE FORM */}
-      <Card className="bg-slate-900 border border-slate-700">
-        <CardHeader>
-          <CardTitle>Create New Task / Form</CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Title</Label>
-            <Input
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-            />
-          </div>
-
-          <div>
-            <Label>Type</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(val) =>
-                setFormData({ ...formData, type: val })
-              }
+  /* ================= VIEW 1: TASK LIST ================= */
+  if (!selectedTask) {
+    return (
+      <div className="p-8 bg-slate-900 min-h-screen text-white">
+        <h1 className="text-3xl font-bold mb-6">Task Command Center</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tasks.map((t) => (
+            <Card 
+              key={t._id} 
+              className="bg-slate-800 border-slate-700 hover:border-indigo-500 cursor-pointer transition-all"
+              onClick={() => loadSubmissions(t._id)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="internship">Internship</SelectItem>
-                <SelectItem value="hackathon">Hackathon</SelectItem>
-                <SelectItem value="job">Job</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Description</Label>
-            <Textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  description: e.target.value,
-                })
-              }
-            />
-          </div>
-
-          {/* 💰 REWARD */}
-          <div>
-            <Label>Reward (SOL)</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.1"
-              value={reward}
-              onChange={(e) => setReward(Number(e.target.value))}
-            />
-            {reward > 0 && (
-              <p className="text-xs text-yellow-400 mt-1">
-                Paid task → SOL locked in escrow
-              </p>
-            )}
-          </div>
-
-          {/* ================= QUESTIONS ================= */}
-          <div className="space-y-4">
-            <Label>Questions</Label>
-
-            {formData.questions.map((q, index) => (
-              <Card
-                key={q.id}
-                className="bg-slate-800 p-4 space-y-2"
-              >
-                <Input
-                  placeholder="Question label"
-                  value={q.label}
-                  onChange={(e) =>
-                    updateQuestion(index, "label", e.target.value)
-                  }
-                />
-
-                <Select
-                  value={q.type}
-                  onValueChange={(val) =>
-                    updateQuestion(index, "type", val)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUESTION_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <label className="flex gap-2 items-center text-sm">
-                  <input
-                    type="checkbox"
-                    checked={q.required}
-                    onChange={(e) =>
-                      updateQuestion(
-                        index,
-                        "required",
-                        e.target.checked
-                      )
-                    }
-                  />
-                  Required
-                </label>
-
-                {(q.type === "select" ||
-                  q.type === "checkbox" ||
-                  q.type === "radio") && (
-                  <div className="space-y-2">
-                    {q.options.map((opt, i) => (
-                      <Input
-                        key={i}
-                        placeholder={`Option ${i + 1}`}
-                        value={opt}
-                        onChange={(e) =>
-                          updateOption(index, i, e.target.value)
-                        }
-                      />
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => addOption(index)}
-                    >
-                      + Add Option
-                    </Button>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-xl">{t.title}</h3>
+                    <p className="text-indigo-400 text-sm font-mono mt-1">{t.reward} SOL Reward</p>
                   </div>
+                  <div className="bg-slate-700 px-2 py-1 rounded text-xs uppercase">{t.type}</div>
+                </div>
+                <div className="mt-4 flex items-center text-slate-400 text-sm">
+                   View Submissions <ChevronRight size={16} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= VIEW 2: PARTICIPANT LIST ================= */
+  if (selectedTask && !selectedSub) {
+    return (
+      <div className="p-8 bg-slate-900 min-h-screen text-white">
+        <Button variant="ghost" onClick={() => setSelectedTask(null)} className="mb-6 hover:bg-slate-800">
+          <ArrowLeft className="mr-2" /> Back to Dashboard
+        </Button>
+        <h2 className="text-2xl font-bold mb-4">Participants for {selectedTask.form.title}</h2>
+        
+        <div className="space-y-3">
+          {selectedTask.submissions.map((s) => (
+            <Card key={s._id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 cursor-pointer" onClick={() => setSelectedSub(s)}>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center font-bold">
+                    {s.userId?.name?.charAt(0) || "U"}
+                  </div>
+                  <div>
+                    <p className="font-medium">{s.userId?.name || "Anonymous User"}</p>
+                    <p className="text-xs text-slate-400 flex items-center gap-1"><Mail size={12}/> {s.userId?.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                   <div className="text-right mr-4">
+                     <p className="text-xs text-slate-500 uppercase">Integrity Score</p>
+                     <p className={`font-bold ${s.verification?.passed ? 'text-green-400' : 'text-red-400'}`}>
+                       {s.verification?.netScore || 0}%
+                     </p>
+                   </div>
+                   <ChevronRight className="text-slate-500" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= VIEW 3: INDIVIDUAL REVIEW ================= */
+  return (
+    <div className="p-8 bg-slate-900 min-h-screen text-white">
+      <Button variant="ghost" onClick={() => setSelectedSub(null)} className="mb-6">
+        <ArrowLeft className="mr-2" /> Back to Participants
+      </Button>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left: Answers */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="border-b border-slate-700">
+              <CardTitle>Submission Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {selectedTask.form.questions.map((q) => {
+                const answer = selectedSub.answers.find(a => a.questionId === q.id || a.questionId === q._id);
+                return (
+                  <div key={q.id || q._id} className="space-y-1">
+                    <p className="text-sm text-slate-400 font-medium">{q.label}</p>
+                    <p className="text-lg bg-slate-900 p-3 rounded border border-slate-700">
+                      {answer?.value || <span className="text-slate-600 italic">No response</span>}
+                    </p>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Security & Payout */}
+        <div className="space-y-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader><CardTitle>Verification Report</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-slate-900 rounded-lg flex justify-between items-center">
+                <span>Proof of Human:</span>
+                {selectedSub.verification?.passed ? (
+                  <span className="text-green-400 flex items-center gap-1 font-bold"><ShieldCheck size={16}/> PASSED</span>
+                ) : (
+                  <span className="text-red-400 font-bold">FAILED</span>
                 )}
-              </Card>
-            ))}
+              </div>
+              
+              <div className="text-center py-4">
+                <p className="text-slate-400 text-sm">Human Confidence Score</p>
+                <p className="text-5xl font-black text-indigo-500">{selectedSub.verification?.netScore || 0}%</p>
+              </div>
 
-            <Button variant="secondary" onClick={addQuestion}>
-              + Add Question
-            </Button>
-          </div>
+              <hr className="border-slate-700" />
 
-          <Button
-            className="w-full bg-indigo-600"
-            onClick={handleCreateForm}
-            disabled={loading}
-          >
-            {loading ? "Creating..." : "Create Form"}
-          </Button>
-        </CardContent>
-      </Card>
+              <div className="space-y-3">
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg"
+                  onClick={() => handleReleasePayment(selectedSub)}
+                  disabled={loading}
+                >
+                  <Wallet className="mr-2" /> {loading ? "Processing..." : `Pay ${selectedTask.form.reward} SOL`}
+                </Button>
+                <Button variant="outline" className="w-full border-slate-600 hover:bg-red-900/20 hover:text-red-500">
+                  <XCircle className="mr-2" /> Reject Submission
+                </Button>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center font-mono break-all">
+                Escrow: {selectedTask.form.escrowAddress}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

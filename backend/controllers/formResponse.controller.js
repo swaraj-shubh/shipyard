@@ -51,11 +51,22 @@ export const getFormResponses = async (req, res) => {
   try {
     const { formId } = req.params;
 
-    const responses = await FormResponse.find({ formId })
-      .populate("userId", "name email")
+    // 1. Fetch the form
+    const form = await Form.findById(formId);
+    if (!form) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+
+    // 2. Fetch submissions WITH wallet
+    const submissions = await FormResponse.find({ formId })
+      .populate("userId", "name email solanaPublicKey")
       .sort({ createdAt: -1 });
 
-    res.json(responses);
+    // 3. Return structured response
+    res.json({
+      form,
+      submissions,
+    });
   } catch (err) {
     console.error("Fetch responses error:", err);
     res.status(500).json({ message: "Failed to fetch responses" });
